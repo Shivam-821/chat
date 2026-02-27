@@ -13,12 +13,34 @@ import {
 const VideoPage = () => {
   const [time, setTime] = useState(new Date());
   const [mounted, setMounted] = useState(false);
+  const [startMetting, setStartMetting] = useState(false);
+  const [scheduleMeeting, setScheduleMeeting] = useState(false);
+  const [joinMeeting, setJoinMeeting] = useState(false);
+  const [scheduledDate, setScheduledDate] = useState("");
+
+  const d = new Date();
+  const todayDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const currentTimeStr = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 
   useEffect(() => {
     setMounted(true);
     const timer = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // Prevent background scrolling when a modal is open
+  useEffect(() => {
+    if (startMetting || scheduleMeeting || joinMeeting) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+
+    // Cleanup to ensure scrolling is restored
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [startMetting, scheduleMeeting, joinMeeting]);
 
   const istTime = mounted
     ? time.toLocaleTimeString("en-US", {
@@ -37,6 +59,7 @@ const VideoPage = () => {
       })
     : "Loading...";
 
+  // TODO: fetch history from database and remove this array
   const history = [
     {
       id: 1,
@@ -101,7 +124,7 @@ const VideoPage = () => {
             </h3>
           </div>
 
-          <div className="flex flex-col gap-4 overflow-y-auto pr-2">
+          <div className="flex flex-col gap-4 overflow-y-auto pr-2 py-1">
             {history.map((item) => (
               <div
                 key={item.id}
@@ -138,7 +161,10 @@ const VideoPage = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full mt-4">
           {/* Schedule Meeting */}
-          <div className="md:col-span-2 group relative w-full flex flex-col md:flex-row items-center justify-center gap-6 px-10 py-12 bg-cyan-400 dark:bg-sky-500 text-black dark:text-white border-4 border-black dark:border-white rounded-3xl hover:-translate-y-2 hover:shadow-[8px_8px_0_0_#000] dark:hover:shadow-[8px_8px_0_0_#fff] transition-all shadow-[4px_4px_0_0_#000] dark:shadow-[4px_4px_0_0_#fff] cursor-pointer">
+          <div
+            onClick={() => setScheduleMeeting(true)}
+            className="md:col-span-2 group relative w-full flex flex-col md:flex-row items-center justify-center gap-6 px-10 py-12 bg-cyan-400 dark:bg-sky-500 text-black dark:text-white border-4 border-black dark:border-white rounded-3xl hover:-translate-y-2 hover:shadow-[8px_8px_0_0_#000] dark:hover:shadow-[8px_8px_0_0_#fff] transition-all shadow-[4px_4px_0_0_#000] dark:shadow-[4px_4px_0_0_#fff] cursor-pointer"
+          >
             <FaCalendarPlus className="text-6xl md:text-7xl group-hover:scale-110 group-hover:rotate-12 transition-transform" />
             <div className="flex flex-col items-center md:items-start text-center md:text-left">
               <span className="text-4xl font-black uppercase tracking-wider">
@@ -154,7 +180,10 @@ const VideoPage = () => {
           </div>
 
           {/* Join Meeting */}
-          <div className="group relative w-full flex flex-col items-center justify-center gap-4 px-8 py-10 bg-yellow-400 dark:bg-emerald-500 text-black dark:text-white border-4 border-black dark:border-white rounded-3xl hover:-translate-y-2 hover:shadow-[8px_8px_0_0_#000] dark:hover:shadow-[8px_8px_0_0_#fff] transition-all shadow-[4px_4px_0_0_#000] dark:shadow-[4px_4px_0_0_#fff] cursor-pointer rotate-1 hover:rotate-0">
+          <div
+            onClick={() => setJoinMeeting(true)}
+            className="group relative w-full flex flex-col items-center justify-center gap-4 px-8 py-10 bg-yellow-400 dark:bg-emerald-500 text-black dark:text-white border-4 border-black dark:border-white rounded-3xl hover:-translate-y-2 hover:shadow-[8px_8px_0_0_#000] dark:hover:shadow-[8px_8px_0_0_#fff] transition-all shadow-[4px_4px_0_0_#000] dark:shadow-[4px_4px_0_0_#fff] cursor-pointer rotate-1 hover:rotate-0"
+          >
             <FaKeyboard className="text-6xl mb-2 group-hover:scale-110 group-hover:-rotate-12 transition-transform" />
             <span className="text-3xl font-black uppercase tracking-wider text-center">
               Join
@@ -168,7 +197,10 @@ const VideoPage = () => {
           </div>
 
           {/* Instant Meeting */}
-          <div className="group relative w-full flex flex-col items-center justify-center gap-4 px-8 py-10 bg-pink-400 dark:bg-rose-600 text-black dark:text-white border-4 border-black dark:border-white rounded-3xl hover:-translate-y-2 hover:shadow-[8px_8px_0_0_#000] dark:hover:shadow-[8px_8px_0_0_#fff] transition-all shadow-[4px_4px_0_0_#000] dark:shadow-[4px_4px_0_0_#fff] cursor-pointer -rotate-1 hover:rotate-0">
+          <div
+            onClick={() => setStartMetting(true)}
+            className="group relative w-full flex flex-col items-center justify-center gap-4 px-8 py-10 bg-pink-400 dark:bg-rose-600 text-black dark:text-white border-4 border-black dark:border-white rounded-3xl hover:-translate-y-2 hover:shadow-[8px_8px_0_0_#000] dark:hover:shadow-[8px_8px_0_0_#fff] transition-all shadow-[4px_4px_0_0_#000] dark:shadow-[4px_4px_0_0_#fff] cursor-pointer -rotate-1 hover:rotate-0"
+          >
             <FaVideo className="text-6xl mb-2 group-hover:scale-110 group-hover:rotate-12 transition-transform" />
             <span className="text-3xl font-black uppercase tracking-wider text-center">
               Instant
@@ -182,6 +214,103 @@ const VideoPage = () => {
           </div>
         </div>
       </div>
+
+      {startMetting && (
+        <div className="fixed top-0 left-0 w-screen h-screen bg-pink-200/50 dark:bg-rose-900/50 flex items-center justify-center backdrop-blur-sm z-50 p-4">
+          <div className="bg-white dark:bg-neutral-800 border-4 border-black dark:border-white p-8 rounded-3xl shadow-[8px_8px_0_0_#000] dark:shadow-[8px_8px_0_0_#fff] max-w-md w-full relative transform rotate-1">
+            <button
+              onClick={() => setStartMetting(false)}
+              className="absolute -top-4 -right-4 bg-red-400 text-black border-4 border-black dark:border-white rounded-full w-10 h-10 flex items-center justify-center font-black text-xl hover:scale-110 hover:-rotate-12 transition-transform shadow-[2px_2px_0_0_#000] dark:shadow-[2px_2px_0_0_#fff]"
+            >
+              X
+            </button>
+            <h2 className="text-4xl font-black text-black dark:text-white mb-6 tracking-wide drop-shadow-[2px_2px_0_#f472b6] dark:drop-shadow-[2px_2px_0_#e11d48]">
+              Instant Connect
+            </h2>
+            <p className="text-lg font-bold text-neutral-700 dark:text-neutral-300 mb-6">
+              Ready to jump right in? We'll generate a secure room for you
+              instantly.
+            </p>
+            <button
+              onClick={() => setStartMetting(false)}
+              className="w-full bg-pink-400 dark:bg-rose-600 text-black dark:text-white font-black text-2xl py-4 border-4 border-black dark:border-white rounded-2xl shadow-[4px_4px_0_0_#000] dark:shadow-[4px_4px_0_0_#fff] hover:-translate-y-1 hover:shadow-[6px_6px_0_0_#000] dark:hover:shadow-[6px_6px_0_0_#fff] active:translate-y-1 active:shadow-none transition-all uppercase tracking-wider"
+            >
+              Go Live Now!
+            </button>
+          </div>
+        </div>
+      )}
+      {scheduleMeeting && (
+        <div className="fixed top-0 left-0 w-screen h-screen bg-cyan-200/50 dark:bg-sky-900/50 flex items-center justify-center backdrop-blur-sm z-50 p-4">
+          <div className="bg-white dark:bg-neutral-800 border-4 border-black dark:border-white p-8 rounded-3xl shadow-[8px_8px_0_0_#000] dark:shadow-[8px_8px_0_0_#fff] max-w-md w-full relative transform -rotate-1">
+            <button
+              onClick={() => setScheduleMeeting(false)}
+              className="absolute -top-4 -right-4 bg-red-400 text-black border-4 border-black dark:border-white rounded-full w-10 h-10 flex items-center justify-center font-black text-xl hover:scale-110 hover:-rotate-12 transition-transform shadow-[2px_2px_0_0_#000] dark:shadow-[2px_2px_0_0_#fff]"
+            >
+              X
+            </button>
+            <h2 className="text-4xl font-black text-black dark:text-white mb-6 tracking-wide drop-shadow-[2px_2px_0_#22d3ee] dark:drop-shadow-[2px_2px_0_#0ea5e9]">
+              Schedule Connect
+            </h2>
+            <div className="flex flex-col gap-4 mb-6">
+              <input
+                type="text"
+                placeholder="Meeting Title"
+                className="w-full bg-cyan-100 dark:bg-neutral-700 text-black dark:text-white font-bold text-lg p-3 border-4 border-black dark:border-white rounded-xl focus:outline-none focus:ring-4 focus:ring-cyan-400 shadow-[inset_2px_2px_0_0_rgba(0,0,0,0.1)] placeholder:text-neutral-500"
+              />
+              <div className="flex gap-4">
+                <input
+                  type="date"
+                  min={todayDateStr}
+                  onChange={(e) => setScheduledDate(e.target.value)}
+                  className="w-1/2 bg-cyan-100 dark:bg-neutral-700 text-black dark:text-white font-bold text-md p-3 border-4 border-black dark:border-white rounded-xl focus:outline-none focus:ring-4 focus:ring-cyan-400 shadow-[inset_2px_2px_0_0_rgba(0,0,0,0.1)]"
+                />
+                <input
+                  type="time"
+                  min={
+                    scheduledDate === todayDateStr ? currentTimeStr : undefined
+                  }
+                  className="w-1/2 bg-cyan-100 dark:bg-neutral-700 text-black dark:text-white font-bold text-md p-3 border-4 border-black dark:border-white rounded-xl focus:outline-none focus:ring-4 focus:ring-cyan-400 shadow-[inset_2px_2px_0_0_rgba(0,0,0,0.1)]"
+                />
+              </div>
+            </div>
+            <button
+              onClick={() => setScheduleMeeting(false)}
+              className="w-full bg-cyan-400 dark:bg-sky-500 text-black dark:text-white font-black text-2xl py-4 border-4 border-black dark:border-white rounded-2xl shadow-[4px_4px_0_0_#000] dark:shadow-[4px_4px_0_0_#fff] hover:-translate-y-1 hover:shadow-[6px_6px_0_0_#000] dark:hover:shadow-[6px_6px_0_0_#fff] active:translate-y-1 active:shadow-none transition-all uppercase tracking-wider"
+            >
+              Add to Calendar
+            </button>
+          </div>
+        </div>
+      )}
+      {joinMeeting && (
+        <div className="fixed top-0 left-0 w-screen h-screen bg-lime-200/50 dark:bg-emerald-900/50 flex items-center justify-center backdrop-blur-sm z-50 p-4">
+          <div className="bg-white dark:bg-neutral-800 border-4 border-black dark:border-white p-8 rounded-3xl shadow-[8px_8px_0_0_#000] dark:shadow-[8px_8px_0_0_#fff] max-w-md w-full relative transform rotate-1">
+            <button
+              onClick={() => setJoinMeeting(false)}
+              className="absolute -top-4 -right-4 bg-red-400 text-black border-4 border-black dark:border-white rounded-full w-10 h-10 flex items-center justify-center font-black text-xl hover:scale-110 hover:-rotate-12 transition-transform shadow-[2px_2px_0_0_#000] dark:shadow-[2px_2px_0_0_#fff]"
+            >
+              X
+            </button>
+            <h2 className="text-4xl font-black text-black dark:text-white mb-6 tracking-wide drop-shadow-[2px_2px_0_#facc15] dark:drop-shadow-[2px_2px_0_#10b981]">
+              Join Connect
+            </h2>
+            <div className="flex flex-col gap-4 mb-6">
+              <input
+                type="text"
+                placeholder="Paste Meeting ID or Link"
+                className="w-full bg-yellow-100 dark:bg-neutral-700 text-black dark:text-white font-bold text-lg p-4 border-4 border-black dark:border-white rounded-xl focus:outline-none focus:ring-4 focus:ring-yellow-400 dark:focus:ring-emerald-500 shadow-[inset_2px_2px_0_0_rgba(0,0,0,0.1)] placeholder:text-neutral-500"
+              />
+            </div>
+            <button
+              onClick={() => setJoinMeeting(false)}
+              className="w-full bg-yellow-400 dark:bg-emerald-500 text-black dark:text-white font-black text-2xl py-4 border-4 border-black dark:border-white rounded-2xl shadow-[4px_4px_0_0_#000] dark:shadow-[4px_4px_0_0_#fff] hover:-translate-y-1 hover:shadow-[6px_6px_0_0_#000] dark:hover:shadow-[6px_6px_0_0_#fff] active:translate-y-1 active:shadow-none transition-all uppercase tracking-wider"
+            >
+              Enter Room
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

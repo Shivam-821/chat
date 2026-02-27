@@ -13,7 +13,7 @@ const NavBar = () => {
       <div>
         <p
           onClick={() => router.push("/")}
-          className="cursor-pointer text-2xl font-semibold"
+          className="cursor-pointer text-3xl md:text-4xl font-black uppercase tracking-widest text-black dark:text-white drop-shadow-[2px_2px_0_#facc15] dark:drop-shadow-[2px_2px_0_#10b981] transform -rotate-2 hover:rotate-0 transition-transform"
         >
           Chat
         </p>
@@ -58,6 +58,7 @@ const NavBar = () => {
             <div className="flex items-center gap-2 cursor-pointer hover:scale-104">
               Theme: <ThemeButton />
             </div>
+            <div className="cursor-pointer hover:scale-104">Notifications</div>
             <div className="cursor-pointer hover:scale-104">sign out</div>
           </div>
         )}
