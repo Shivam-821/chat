@@ -3,11 +3,15 @@
   "module": "src/index.ts",
   "type": "module",
   "private": true,
+  "scripts": {
+    "dev": "nodemon "
+  },
   "devDependencies": {
     "@types/bun": "latest",
     "@types/cors": "^2.8.19",
     "@types/dotenv": "^8.2.3",
-    "@types/express": "^5.0.6"
+    "@types/express": "^5.0.6",
+    "nodemon": "^3.1.14"
   },
   "peerDependencies": {
     "typescript": "^5"
@@ -16,6 +20,8 @@
     "cloudinary": "^2.9.0",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "mongoose": "^9.2.3",
+    "redis": "^5.11.0"
   }
 }
