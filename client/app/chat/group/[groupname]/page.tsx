@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import React, { use } from "react";
 import {
   FaUsers,
@@ -22,6 +23,7 @@ const GroupChatPage = ({ params }: PageProps) => {
   const resolvedParams = use(params);
   // Decode the URL-encoded groupname (e.g., %20 to space)
   const decodedGroupname = decodeURIComponent(resolvedParams.groupname);
+  const router = useRouter()
 
   return (
     <div className="flex flex-col h-[calc(100vh-64px)] bg-amber-50 dark:bg-neutral-950 w-full relative">
@@ -51,6 +53,7 @@ const GroupChatPage = ({ params }: PageProps) => {
             className="cursor-pointer hover:text-amber-600 dark:hover:text-amber-400 transition-colors hover:scale-110"
           />
           <FaInfoCircle
+            onClick={() => router.push(`/chat/group/${decodedGroupname}/info`)}
             size={20}
             className="cursor-pointer hover:text-amber-600 dark:hover:text-amber-400 transition-colors hover:scale-110"
           />
