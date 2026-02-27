@@ -1,65 +1,45 @@
-import Image from "next/image";
+import React from "react";
+import Link from "next/link";
 
-export default function Home() {
+const HomePage = () => {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <div className="flex flex-col items-center justify-center grow p-6 overflow-hidden relative">
+      <div className="max-w-4xl text-center space-y-12 relative z-10 w-full">
+        {/* Cartoonish Title */}
+        <h1 className="text-6xl md:text-8xl font-black tracking-wider text-black dark:text-white drop-shadow-[5px_5px_0_#facc15] dark:drop-shadow-[5px_5px_0_#10b981] uppercase leading-tight">
+          Say Hello To <br />
+          <span className="text-yellow-500 dark:text-emerald-400 block mt-4 text-7xl md:text-9xl transform -rotate-2">
+            Chat!
+          </span>
+        </h1>
+
+        {/* Description Card */}
+        <div className="mx-auto max-w-2xl bg-white dark:bg-neutral-800 p-8 border-4 border-black dark:border-white rounded-3xl shadow-[8px_8px_0_0_#000] dark:shadow-[8px_8px_0_0_#fff] transform lg:-rotate-2 hover:rotate-0 transition-transform duration-300">
+          <p className="text-2xl md:text-3xl font-bold text-black dark:text-neutral-100 leading-snug">
+            The most fun, secure, and cartoonishly awesome place to hang out
+            online!
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        {/* Action Buttons */}
+        <div className="flex flex-col sm:flex-row gap-8 justify-center mt-12 w-full max-w-lg mx-auto sm:max-w-none">
+          <Link href="/chat/individual">
+            <button className="group relative w-full sm:w-auto px-8 py-4 text-2xl font-bold bg-yellow-400 dark:bg-rose-500 text-black dark:text-white border-4 border-black dark:border-white rounded-2xl hover:-translate-y-2 hover:shadow-[8px_8px_0_0_#000] dark:hover:shadow-[8px_8px_0_0_#fff] transition-all shadow-[4px_4px_0_0_#000] dark:shadow-[4px_4px_0_0_#fff] active:translate-y-1 active:shadow-none">
+              Direct Chat
+              <span className="absolute -top-4 -right-4 bg-lime-400 dark:bg-sky-400 text-black dark:text-white text-sm px-3 py-1 rounded-full border-2 border-black dark:border-white rotate-12 group-hover:rotate-0 transition-transform">
+                Private!
+              </span>
+            </button>
+          </Link>
+          <Link href="/chat">
+            <button className="w-full sm:w-auto px-8 py-4 text-2xl font-bold bg-cyan-400 dark:bg-cyan-500 text-black dark:text-white border-4 border-black dark:border-white rounded-2xl hover:-translate-y-2 hover:shadow-[8px_8px_0_0_#000] dark:hover:shadow-[8px_8px_0_0_#fff] transition-all shadow-[4px_4px_0_0_#000] dark:shadow-[4px_4px_0_0_#fff] active:translate-y-1 active:shadow-none">
+              Discover Chat
+            </button>
+          </Link>
         </div>
-      </main>
+      </div>
     </div>
   );
-}
+};
+
+export default HomePage;
