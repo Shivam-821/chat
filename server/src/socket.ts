@@ -1,28 +1,12 @@
-import { io } from "./config/socket.js";
+import { Server } from "socket.io";
 
-io.on("connection", (socket) => {
+export const initSocketListeners = (io: Server) => {
+  io.on("connection", (socket) => {
     console.log(`User connected: ${socket.id}`);
-    
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
-  // disconnect
-  socket.on("disconnect", () => {
-    console.log(`User disconnected: ${socket.id}`);
+    // disconnect
+    socket.on("disconnect", () => {
+      console.log(`User disconnected: ${socket.id}`);
+    });
   });
-});
+};

@@ -1,5 +1,6 @@
 import { Server } from "socket.io";
 import { httpServer } from "../index.js";
+import { initSocketListeners } from "../socket.js";
 
 export let io: Server;
 
@@ -11,4 +12,6 @@ export const connectSocket = () => {
       credentials: true,
     },
   });
+
+  initSocketListeners(io);
 };
