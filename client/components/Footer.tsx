@@ -68,7 +68,7 @@ const Footer = () => {
       </div>
       <div className="mt-8 pt-4 border-t border-lime-200 dark:border-neutral-800 text-sm font-bold text-slate-500 dark:text-slate-500 flex items-center justify-center gap-2">
         <span className="pt-1">&copy;</span> {new Date().getFullYear()} Chat
-        App. Let's talk!
+        App. Let&apos;s talk!
       </div>
     </footer>
   );

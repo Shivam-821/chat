@@ -22,16 +22,15 @@ const SignUpPage = () => {
     setError("");
     setIsLoading(true);
 
-    try {
-      const response = await registerApi(username, email, password);
+    const response = await registerApi(username, email, password);
+    if (response) {
       // login automatically on successful registration
-      login(response.user, response.token);
+      login(response);
       router.push("/chat");
-    } catch (err: any) {
-      setError(err.message || "Failed to sign up. Please try again.");
-    } finally {
-      setIsLoading(false);
+    } else {
+      setError("Failed to sign up. Please try again.");
     }
+    setIsLoading(false);
   };
 
   return (
@@ -44,8 +43,7 @@ const SignUpPage = () => {
         <div className="text-center mb-8">
           <h1 className="text-3xl sm:text-4xl font-black text-slate-800 dark:text-slate-100 tracking-tight mb-2">
             Join the Fun!{" "}
-            <span className="text-4xl inline-block rotate-15 transform origin-bottom mt-1">
-            </span>
+            <span className="text-4xl inline-block rotate-15 transform origin-bottom mt-1"></span>
           </h1>
           <p className="text-slate-500 dark:text-neutral-400 font-bold">
             Create an account to start chatting

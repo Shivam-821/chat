@@ -28,13 +28,28 @@ const NavBar = () => {
           Home
         </p>
 
-        {!isAuthenticated && (
+        {!isAuthenticated ? (
           <>
             <p
               onClick={() => router.push("/signin")}
               className="cursor-pointer hover:scale-105 font-bold text-amber-600 dark:text-amber-400"
             >
               Sign In
+            </p>
+          </>
+        ) : (
+          <>
+            <p
+              onClick={() => router.push("/chat")}
+              className="cursor-pointer hover:scale-105"
+            >
+              Chats
+            </p>
+            <p
+              onClick={() => router.push("/tracker")}
+              className="cursor-pointer hover:scale-105"
+            >
+              Tracker
             </p>
           </>
         )}
@@ -54,36 +69,42 @@ const NavBar = () => {
               <>
                 <div
                   onClick={() => router.push("/profile")}
-                  className="cursor-pointer hover:scale-104 border-b border-lime-300 dark:border-neutral-700 pb-2 mb-1"
+                  className="cursor-pointer hover:scale-105 border-b border-lime-300 dark:border-neutral-700 pb-2 mb-1"
                 >
-                  <span className="font-bold">
+                  <span className="font-semibold hover:font-bold">
                     {user?.username || "Profile"}
                   </span>
                 </div>
                 <div
                   onClick={() => router.push("/notifications")}
-                  className="cursor-pointer hover:scale-104"
+                  className="cursor-pointer hover:scale-105 hover:font-semibold mb-1"
                 >
                   Notifications
+                </div>
+                <div
+                  onClick={() => router.push("/tracker")}
+                  className="md:hidden cursor-pointer hover:scale-105 hover:font-semibold"
+                >
+                  Tracker
                 </div>
               </>
             )}
 
-            <div className="flex items-center gap-2 cursor-pointer hover:scale-104 py-1">
+            <div className="flex items-center gap-2 py-1">
               Theme: <ThemeButton />
             </div>
 
             {isAuthenticated ? (
               <div
                 onClick={logout}
-                className="cursor-pointer hover:scale-104 text-rose-600 dark:text-rose-400 font-bold mt-1 pt-2 border-t border-lime-300 dark:border-neutral-700"
+                className="cursor-pointer hover:scale-105 text-rose-600 dark:text-rose-400 font-semibold mt-1 pt-2 border-t border-lime-300 dark:border-neutral-700"
               >
                 Sign Out
               </div>
             ) : (
               <div
                 onClick={() => router.push("/signin")}
-                className="cursor-pointer hover:scale-104 text-amber-600 dark:text-amber-400 font-bold mt-1 pt-2 border-t border-lime-300 dark:border-neutral-700"
+                className="cursor-pointer hover:scale-105 text-amber-600 dark:text-amber-400 font-semibold mt-1 pt-2 border-t border-lime-300 dark:border-neutral-700"
               >
                 Sign In
               </div>

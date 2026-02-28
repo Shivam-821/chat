@@ -21,15 +21,14 @@ const SignInPage = () => {
     setError("");
     setIsLoading(true);
 
-    try {
-      const response = await loginApi(email, password);
-      login(response.user, response.token);
+    const response = await loginApi(email, password);
+    if (response) {
+      login(response);
       router.push("/chat");
-    } catch (err: any) {
-      setError(err.message || "Failed to sign in. Please try again.");
-    } finally {
-      setIsLoading(false);
+    } else {
+      setError("Failed to sign in. Please try again.");
     }
+    setIsLoading(false);
   };
 
   return (

@@ -7,15 +7,16 @@ import {
   useEffect,
   type ReactNode,
 } from "react";
-import { User, verifyTokenApi } from "@/api/api";
+import { User, AuthResponse, verifyTokenApi } from "@/api/api";
 import { useRouter, usePathname } from "next/navigation";
+import Cookies from "js-cookie";
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (user: User, token: string) => void;
+  login: (data: AuthResponse["data"]) => void;
   logout: () => void;
 }
 
@@ -30,17 +31,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const initializeAuth = async () => {
-      const storedToken = localStorage.getItem("token");
+      const storedToken = localStorage.getItem("chat_token");
 
       if (storedToken) {
-        try {
-          const verifiedUser = await verifyTokenApi(storedToken);
+        const verifiedUser = await verifyTokenApi(storedToken);
+        if (verifiedUser) {
           setToken(storedToken);
           setUser(verifiedUser);
-        } catch (error) {
-          console.error("Token verification failed:", error);
-          localStorage.removeItem("token");
-          localStorage.removeItem("user");
+        } else {
+          localStorage.removeItem("chat_token");
+          localStorage.removeItem("chat_user");
+          Cookies.remove("chat_token");
           setToken(null);
           setUser(null);
         }
@@ -51,20 +52,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     initializeAuth();
   }, []);
 
-  const login = (newUser: User, newToken: string) => {
-    localStorage.setItem("token", newToken);
-    localStorage.setItem("user", JSON.stringify(newUser));
-    setToken(newToken);
-    setUser(newUser);
+  const login = (data: AuthResponse["data"]) => {
+    localStorage.setItem("chat_token", data.token);
+    localStorage.setItem("chat_user", JSON.stringify(data.user));
+    Cookies.set("chat_token", data.token, { expires: 7 }); // expires in 7 days
+    setToken(data.token);
+    setUser(data.user);
   };
 
   const logout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    localStorage.removeItem("chat_token");
+    localStorage.removeItem("chat_user");
+    Cookies.remove("chat_token");
     setToken(null);
     setUser(null);
     router.push("/signin");
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        Loading...
+      </div>
+    );
+  }
 
   return (
     <AuthContext.Provider

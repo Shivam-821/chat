@@ -7,12 +7,15 @@ import {
   FaCompass,
   FaSearch,
   FaUserPlus,
+  FaArrowLeft,
 } from "react-icons/fa";
+import { useMobileLayout } from "@/context/MobileLayoutContext";
 
 const GroupPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [hasSearched, setHasSearched] = useState(false);
   const [requestedGroupId, setRequestedGroupId] = useState<string | null>(null);
+  const { setShowRightSide } = useMobileLayout();
 
   // Mock data for groups
   const mockGroups = [
@@ -34,7 +37,15 @@ const GroupPage = () => {
   };
 
   return (
-    <div className="h-[calc(100vh-64px)] w-full flex flex-col items-center justify-between p-8 overflow-y-auto">
+    <div className="h-[calc(100vh-64px)] w-full flex flex-col items-center justify-between p-8 overflow-y-auto relative">
+      {/* Back button for mobile */}
+      <button
+        onClick={() => setShowRightSide(false)}
+        className="md:hidden absolute top-4 left-4 p-2 bg-slate-100 dark:bg-neutral-800 rounded-full text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-neutral-700 transition cursor-pointer"
+      >
+        <FaArrowLeft size={16} />
+      </button>
+
       {/* Top spacer */}
       <div className="flex-1"></div>
 

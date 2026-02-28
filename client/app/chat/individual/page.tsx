@@ -1,24 +1,45 @@
 "use client";
 
+import { addContactApi } from "@/api/api";
 import React, { useState } from "react";
-import { FaUser, FaLock, FaUserPlus, FaSearch } from "react-icons/fa";
+import {
+  FaUser,
+  FaLock,
+  FaUserPlus,
+  FaSearch,
+  FaArrowLeft,
+} from "react-icons/fa";
+import { useAuth } from "@/context/AuthContext";
+import { useMobileLayout } from "@/context/MobileLayoutContext";
 
 const IndiviualPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [requestSent, setRequestSent] = useState(false);
+  const { token } = useAuth();
+  const { setShowRightSide } = useMobileLayout();
 
-  const handleSendRequest = (e: React.FormEvent) => {
+  const handleSendRequest = async (e: React.FormEvent) => {
     e.preventDefault();
     if (searchTerm.trim()) {
-      // Future: integrate API request here
-      setRequestSent(true);
-      setTimeout(() => setRequestSent(false), 3000);
-      setSearchTerm("");
+      if (!token) return;
+      const response = await addContactApi(searchTerm, token);
+      if (response) {
+        setRequestSent(true);
+        setSearchTerm("");
+      }
     }
   };
 
   return (
-    <div className="h-[calc(100vh-56px)] w-full flex flex-col items-center justify-between p-8 overflow-y-auto">
+    <div className="h-[calc(100vh-56px)] w-full flex flex-col items-center justify-between p-8 overflow-y-auto relative">
+      {/* Back button for mobile */}
+      <button
+        onClick={() => setShowRightSide(false)}
+        className="md:hidden absolute top-4 left-4 p-2 bg-slate-100 dark:bg-neutral-800 rounded-full text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-neutral-700 transition"
+      >
+        <FaArrowLeft size={16} />
+      </button>
+
       {/* Top spacer */}
       <div className="flex-1"></div>
 
