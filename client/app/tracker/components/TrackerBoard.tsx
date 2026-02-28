@@ -22,13 +22,6 @@ export default function TrackerBoard() {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-
-  useEffect(() => {
-    if (token) {
-      loadTasks();
-    }
-  }, [token]);
-
   const loadTasks = async () => {
     if (!token) return;
     const fetchedTasks = await getTasksApi(token);
@@ -36,6 +29,12 @@ export default function TrackerBoard() {
       setTasks(fetchedTasks);
     }
   };
+
+  useEffect(() => {
+    if (token) {
+      loadTasks();
+    }
+  }, [token, loadTasks]);
 
   const handleCreateTask = async (newTask: Omit<Task, "_id">) => {
     if (!token) return;

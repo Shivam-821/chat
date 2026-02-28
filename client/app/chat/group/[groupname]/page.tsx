@@ -103,7 +103,7 @@ const GroupChatPage = ({ params }: PageProps) => {
         <div className="flex items-end justify-end gap-3 max-w-[80%] self-end">
           <div className="bg-amber-200 dark:bg-amber-900 p-4 rounded-2xl rounded-br-sm shadow-sm text-slate-800 dark:text-slate-100">
             <p>
-              Glad you guys made it! Let's use this space to collaborate and
+              Glad you guys made it! Let&apos;s use this space to collaborate and
               share updates.
             </p>
             <span className="text-[10px] text-amber-700 dark:text-amber-300 mt-2 block w-full text-right">

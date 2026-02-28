@@ -112,7 +112,7 @@ const SignInPage = () => {
 
         <div className="mt-8 text-center border-t-2 border-dashed border-slate-200 dark:border-neutral-700 pt-6">
           <p className="text-slate-500 dark:text-neutral-400 font-medium">
-            Don't have an account?{" "}
+            Don&apos;t have an account?{" "}
             <Link
               href="/signup"
               className="text-amber-600 dark:text-amber-400 hover:text-amber-500 font-bold hover:underline underline-offset-4 pl-1"

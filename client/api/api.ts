@@ -1,4 +1,4 @@
-import axios, { AxiosError } from "axios";
+import axios from "axios";
 import toast from "react-hot-toast";
 
 // Base URL for the backend API
@@ -9,6 +9,9 @@ export interface User {
   name: string;
   username: string;
   email: string;
+  avatar?: string;
+  avatarPublicId?: string;
+  about?: string;
 }
 
 export interface AuthResponse {
@@ -31,8 +34,34 @@ export const verifyTokenApi = async (token: string): Promise<User | null> => {
       },
     });
     return res.data.data.user;
-  } catch (error) {
-    toast.error("Session expired or invalid token");
+  } catch (error: any) {
+    toast.error(
+      error.response?.data?.message || "Session expired or invalid token",
+    );
+    return null;
+  }
+};
+
+export const updateProfileApi = async (
+  data: { name?: string; about?: string; avatar?: File | null },
+  token: string,
+): Promise<User | null> => {
+  try {
+    const formData = new FormData();
+    if (data.name) formData.append("name", data.name);
+    if (data.about !== undefined) formData.append("about", data.about);
+    if (data.avatar) formData.append("avatar", data.avatar);
+
+    const res = await axios.patch(`${API_URL}/auth/profile`, formData, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    toast.success("Profile updated!");
+    return res.data.data.user;
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || "Failed to update profile");
     return null;
   }
 };
@@ -164,9 +193,88 @@ export const getMyGroupsApi = async (token: string) => {
   }
 };
 
+export const requestJoinGroupApi = async (groupId: string, token: string) => {
+  try {
+    await axios.post(
+      `${API_URL}/groups/${groupId}/join-request`,
+      {},
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+    toast.success("Join request sent!");
+    return true;
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || "Failed to send join request");
+    return false;
+  }
+};
+
+export const getGroupJoinRequestsApi = async (token: string) => {
+  try {
+    const res = await axios.get(`${API_URL}/groups/join-requests/all`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return res.data.data.requests as any[];
+  } catch (error: any) {
+    return null;
+  }
+};
+
+export const updateGroupJoinRequestApi = async (
+  requestId: string,
+  status: "accepted" | "rejected",
+  token: string,
+) => {
+  try {
+    await axios.patch(
+      `${API_URL}/groups/join-requests/${requestId}`,
+      { status },
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+    toast.success(`Request ${status}!`);
+    return true;
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || "Failed to update request");
+    return false;
+  }
+};
+
+export const searchGroupsApi = async (query: string, token: string) => {
+  try {
+    const res = await axios.get(
+      `${API_URL}/groups/search?q=${encodeURIComponent(query)}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    );
+    return res.data.data.groups as {
+      _id: string;
+      name: string;
+      members: any[];
+    }[];
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || "Search failed");
+    return null;
+  }
+};
+
 export const getGroupByIdApi = async (groupId: string, token: string) => {
   try {
     const res = await axios.get(`${API_URL}/groups/${groupId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return res.data.data.group;
+  } catch (error: any) {
+    toast.error(
+      error.response?.data?.message || "Failed to fetch group details",
+    );
+    return null;
+  }
+};
+
+export const getGroupByNameApi = async (groupName: string, token: string) => {
+  try {
+    const encodedName = encodeURIComponent(groupName);
+    const res = await axios.get(`${API_URL}/groups/name/${encodedName}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     return res.data.data.group;
@@ -201,6 +309,25 @@ export const deleteGroupApi = async (groupId: string, token: string) => {
   } catch (error: any) {
     toast.error(error.response?.data?.message || "Failed to delete group");
     return false;
+  }
+};
+
+export const addMembersApi = async (
+  groupId: string,
+  memberIds: string[],
+  token: string,
+) => {
+  try {
+    const res = await axios.post(
+      `${API_URL}/groups/${groupId}/members`,
+      { memberIds },
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+    toast.success("Members added successfully!");
+    return res.data.data.group;
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || "Failed to add members");
+    return null;
   }
 };
 

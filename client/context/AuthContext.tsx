@@ -18,6 +18,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (data: AuthResponse["data"]) => void;
   logout: () => void;
+  updateUser: (u: User) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -38,6 +39,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (verifiedUser) {
           setToken(storedToken);
           setUser(verifiedUser);
+          // Persist full user (including avatar/about) back to localStorage
+          localStorage.setItem("chat_user", JSON.stringify(verifiedUser));
         } else {
           localStorage.removeItem("chat_token");
           localStorage.removeItem("chat_user");
@@ -55,9 +58,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = (data: AuthResponse["data"]) => {
     localStorage.setItem("chat_token", data.token);
     localStorage.setItem("chat_user", JSON.stringify(data.user));
-    Cookies.set("chat_token", data.token, { expires: 7 }); // expires in 7 days
+    Cookies.set("chat_token", data.token, { expires: 7 });
     setToken(data.token);
     setUser(data.user);
+  };
+
+  const updateUser = (u: User) => {
+    setUser(u);
+    localStorage.setItem("chat_user", JSON.stringify(u));
   };
 
   const logout = () => {
@@ -86,6 +94,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         isLoading,
         login,
         logout,
+        updateUser,
       }}
     >
       {children}

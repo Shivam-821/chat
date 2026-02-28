@@ -1,10 +1,8 @@
 "use client";
 
-import React from "react";
 import { Task, TaskStatus } from "../types";
 import {
   Calendar,
-  Clock,
   Edit2,
   Trash2,
   CheckCircle2,

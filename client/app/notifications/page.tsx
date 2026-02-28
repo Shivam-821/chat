@@ -28,12 +28,6 @@ const NotificationPage = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>("all");
 
-  useEffect(() => {
-    if (isAuthenticated && token) {
-      loadNotifications();
-    }
-  }, [isAuthenticated, token]);
-
   const loadNotifications = async () => {
     setLoading(true);
     if (!token) return;
@@ -48,6 +42,12 @@ const NotificationPage = () => {
     }
     setLoading(false);
   };
+
+  useEffect(() => {
+    if (isAuthenticated && token) {
+      loadNotifications();
+    }
+  }, [isAuthenticated, token]);
 
   const handleMarkAsRead = async (id: string) => {
     if (!token) return;
@@ -108,7 +108,7 @@ const NotificationPage = () => {
           Unread Notifications
         </h1>
         <p className="text-slate-500 font-bold mt-2">
-          Catch up on what you've missed!
+          Catch up on what you&apos;ve missed!
         </p>
       </div>
 

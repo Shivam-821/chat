@@ -6,10 +6,12 @@ import { useAuth } from "@/context/AuthContext";
 import { getContactsApi, createGroupApi, getMyGroupsApi } from "@/api/api";
 import { FaUserFriends, FaPlus, FaTimes } from "react-icons/fa";
 import { useRouter, usePathname } from "next/navigation";
+import { useMobileLayout } from "@/context/MobileLayoutContext";
 import toast from "react-hot-toast";
 
 const SideBar = () => {
   const { token, isAuthenticated } = useAuth();
+  const { setShowRightSide } = useMobileLayout();
   const [contacts, setContacts] = useState<any[]>([]);
   const [groups, setGroups] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,8 +37,8 @@ const SideBar = () => {
       setIsModalOpen(false);
       setGroupName("");
       setSelectedMembers([]);
-      // Maybe navigate to the group
-      router.push(`/chat/group/${newGroup._id}`);
+      setShowRightSide(true);
+      router.push(`/chat/group/${encodeURIComponent(newGroup.name)}`);
     }
     setIsCreating(false);
   };
@@ -118,7 +120,10 @@ const SideBar = () => {
         ) : (
           groups.map((group) => (
             <div
-              onClick={() => router.push(`/chat/group/${group._id}`)}
+              onClick={() => {
+                setShowRightSide(true);
+                router.push(`/chat/group/${encodeURIComponent(group.name)}`);
+              }}
               key={group._id}
               className="h-18 border-y border-amber-200 dark:border-neutral-700 flex items-center gap-5 px-3 hover:bg-lime-200/50 dark:hover:bg-neutral-800/50 cursor-pointer transition-colors"
             >
@@ -155,13 +160,26 @@ const SideBar = () => {
       ) : (
         contacts.map((contact) => (
           <div
-            onClick={() => router.push(`/chat/individual/${contact.username}`)}
+            onClick={() => {
+              setShowRightSide(true);
+              router.push(`/chat/individual/${contact.username}`);
+            }}
             key={contact._id}
             className="h-18 border-y border-amber-200 dark:border-neutral-700 flex items-center gap-5 px-3 hover:bg-lime-200/50 dark:hover:bg-neutral-800/50 cursor-pointer transition-colors"
           >
             <div className="relative">
-              <div className="w-12 h-12 rounded-full bg-amber-200 dark:bg-amber-900 flex items-center justify-center text-xl font-black text-amber-800 dark:text-amber-100 border-2 border-amber-300 dark:border-amber-700">
-                {contact.name ? contact.name.charAt(0).toUpperCase() : "?"}
+              <div className="w-12 h-12 rounded-full bg-amber-200 dark:bg-amber-900 flex items-center justify-center text-xl font-black text-amber-800 dark:text-amber-100 border-2 border-amber-300 dark:border-amber-700 overflow-hidden">
+                {contact.avatar ? (
+                  <img
+                    src={contact.avatar}
+                    alt={contact.name || contact.username}
+                    className="w-full h-full object-cover"
+                  />
+                ) : contact.name ? (
+                  contact.name.charAt(0).toUpperCase()
+                ) : (
+                  "?"
+                )}
               </div>
               <span
                 className={`absolute bottom-0 right-0 w-3.5 h-3.5 border-2 border-[#eafcc5] dark:border-neutral-900 rounded-full ${contact.isOnline ? "bg-emerald-500" : "bg-slate-400"}`}
@@ -223,7 +241,7 @@ const SideBar = () => {
                   <div className="bg-slate-50 dark:bg-neutral-900 border-2 border-slate-300 dark:border-neutral-600 rounded-xl overflow-y-auto flex-1 p-2">
                     {contacts.length === 0 ? (
                       <p className="text-center text-slate-500 text-sm py-4">
-                        You don't have any contacts to add.
+                        You don&apos;t have any contacts to add.
                       </p>
                     ) : (
                       contacts.map((contact) => (

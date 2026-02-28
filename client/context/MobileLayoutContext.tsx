@@ -22,7 +22,17 @@ export const MobileLayoutProvider = ({ children }: { children: ReactNode }) => {
   const pathname = usePathname();
 
   useEffect(() => {
-    setShowRightSide(false);
+    // Only reset to sidebar view when navigating to a top-level selection page
+    // (e.g., /chat, /chat/group, /chat/individual landing pages)
+    // Don't reset when navigating deeper into a chat (e.g., /chat/group/[id]/info)
+    const isTopLevelChatPage =
+      pathname === "/chat" ||
+      pathname === "/chat/group" ||
+      pathname === "/chat/individual";
+
+    if (isTopLevelChatPage) {
+      setShowRightSide(false);
+    }
   }, [pathname]);
 
   return (

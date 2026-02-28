@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -11,7 +11,6 @@ import {
   Clock,
 } from "lucide-react";
 import TaskModal from "./TaskModal";
-import toast from "react-hot-toast";
 
 import {
   getTasksApi,
@@ -20,7 +19,7 @@ import {
   deleteTaskApi,
 } from "../../../api/api";
 import { useAuth } from "../../../context/AuthContext";
-import { Task, TaskStatus, TaskPriority } from "../types";
+import { Task } from "../types";
 
 // Helper to get days in a month
 const getDaysInMonth = (year: number, month: number) =>

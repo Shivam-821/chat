@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import ThemeButton from "./ThemeButton";
-import { AiFillSetting } from "react-icons/ai";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useNotifications } from "@/context/NotificationContext";
@@ -58,13 +57,27 @@ const NavBar = () => {
       </div>
       <div className="relative">
         <div className="relative inline-block">
-          <AiFillSetting
-            size={20}
-            className="hover:rotate-45 transition-all duration-300 cursor-pointer"
+          {/* Avatar / fallback initial button */}
+          <button
             onClick={() => setOpenModal(!openModal)}
-          />
+            className="w-9 h-9 rounded-full border-2 border-slate-800 dark:border-neutral-600 overflow-hidden flex items-center justify-center bg-lime-200 dark:bg-neutral-700 hover:ring-2 hover:ring-amber-400 transition-all focus:outline-none"
+          >
+            {isAuthenticated && user?.avatar ? (
+              <img
+                src={user.avatar}
+                alt={user.name || user.username}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <span className="text-sm font-black text-slate-800 dark:text-slate-200">
+                {isAuthenticated
+                  ? (user?.username?.charAt(0).toUpperCase() ?? "?")
+                  : "?"}
+              </span>
+            )}
+          </button>
           {isAuthenticated && unreadCount > 0 && (
-            <span className="absolute -top-2 -right-2 bg-rose-500 text-white dark:text-rose-50 text-[8px] font-bold px-1.5 py-0.5 rounded-full border-2 border-lime-100 dark:border-neutral-900 pointer-events-none">
+            <span className="absolute -top-1 -right-1 bg-rose-500 text-white dark:text-rose-50 text-[8px] font-bold px-1.5 py-0.5 rounded-full border-2 border-lime-100 dark:border-neutral-900 pointer-events-none">
               {unreadCount > 99 ? "99+" : unreadCount}
             </span>
           )}
