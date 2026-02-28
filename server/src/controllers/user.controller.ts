@@ -6,6 +6,7 @@ import { ApiError } from "../utils/ApiError";
 import { ApiResponse } from "../utils/ApiResponse";
 import type { AuthRequest } from "../middlewares/auth.middleware";
 import { IndividualMessageModel } from "../models/individual.model";
+import { NotificationModel } from "../models/notification.model";
 
 export const addContactRequest = asyncHandler(
   async (req: AuthRequest, res: Response) => {
@@ -70,6 +71,13 @@ export const addContactRequest = asyncHandler(
       sender: user._id,
       receiver: targetUser._id,
       status: "pending",
+    });
+
+    const notification = await NotificationModel.create({
+      user: targetUser._id,
+      title: "New contact request",
+      content: `${user.username} sent you a contact request`,
+      notificationType: "request",
     });
 
     return res

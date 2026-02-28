@@ -22,8 +22,12 @@ app.get("/", (req, res) => {
 // Important routes
 import authRouter from "./routes/auth.routes";
 import userRouter from "./routes/user.routes";
+import taskRouter from "./routes/task.routes";
+import notificationRouter from "./routes/notification.routes";
 
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/users", userRouter);
+app.use("/api/v1/tasks", taskRouter);
+app.use("/api/v1/notifications", notificationRouter);
 
 export { app };

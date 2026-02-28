@@ -4,6 +4,7 @@ import { UserModel } from "../models/user.model";
 import { ApiError } from "../utils/ApiError";
 import { ApiResponse } from "../utils/ApiResponse";
 import type { AuthRequest } from "../middlewares/auth.middleware";
+import { NotificationModel } from "../models/notification.model";
 
 export const registerUser = asyncHandler(
   async (req: Request, res: Response) => {
@@ -28,6 +29,14 @@ export const registerUser = asyncHandler(
       password,
       isVerified: false,
       isOnline: true,
+    });
+
+    const notification = await NotificationModel.create({
+      user: user._id,
+      title: "Welcome to Chat platform",
+      content:
+        "Thank you for joining our platform. We make sure you have a smooth and secure experience.",
+      notificationType: "greeting",
     });
 
     const token = user.generateToken();
@@ -78,21 +87,23 @@ export const loginUser = asyncHandler(async (req: Request, res: Response) => {
     );
 });
 
-export const verifyToken = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const userId = req.user;
+export const verifyToken = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const userId = req.user;
 
-  const user = await UserModel.findById(userId);
-  if (!user) {
-    return res.status(404).json(new ApiError(404, "User not found"));
-  }
+    const user = await UserModel.findById(userId);
+    if (!user) {
+      return res.status(404).json(new ApiError(404, "User not found"));
+    }
 
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        { user: { username: user.username, email: user.email } },
-        "Token verified",
-      ),
-    );
-});
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          { user: { username: user.username, email: user.email } },
+          "Token verified",
+        ),
+      );
+  },
+);
