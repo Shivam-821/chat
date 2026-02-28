@@ -5,6 +5,7 @@ import { ApiError } from "../utils/ApiError";
 import { ApiResponse } from "../utils/ApiResponse";
 import type { AuthRequest } from "../middlewares/auth.middleware";
 import { NotificationModel } from "../models/notification.model";
+import { uploadToCloudinary, deleteFromCloudinary } from "../utils/cloudinary";
 
 export const registerUser = asyncHandler(
   async (req: Request, res: Response) => {
@@ -50,6 +51,7 @@ export const registerUser = asyncHandler(
           201,
           {
             user: {
+              _id: user._id,
               name: user.name,
               username: user.username,
               email: user.email,
@@ -90,7 +92,15 @@ export const loginUser = asyncHandler(async (req: Request, res: Response) => {
       new ApiResponse(
         200,
         {
-          user: { name: user.name, username: user.username, email: user.email },
+          user: {
+            _id: user._id,
+            name: user.name,
+            username: user.username,
+            email: user.email,
+            avatar: user.avatar,
+            avatarPublicId: user.avatarPublicId,
+            about: user.about,
+          },
           token,
         },
         "User logged in successfully",
@@ -107,20 +117,72 @@ export const verifyToken = asyncHandler(
       return res.status(404).json(new ApiError(404, "User not found"));
     }
 
-    return res
-      .status(200)
-      .json(
-        new ApiResponse(
-          200,
-          {
-            user: {
-              name: user.name,
-              username: user.username,
-              email: user.email,
-            },
+    return res.status(200).json(
+      new ApiResponse(
+        200,
+        {
+          user: {
+            _id: user._id,
+            name: user.name,
+            username: user.username,
+            email: user.email,
+            avatar: user.avatar,
+            avatarPublicId: user.avatarPublicId,
+            about: user.about,
           },
-          "Token verified",
-        ),
-      );
+        },
+        "Token verified",
+      ),
+    );
+  },
+);
+
+export const updateProfile = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const user = req.user;
+    if (!user) throw new ApiError(401, "Unauthorized");
+
+    const { name, about } = req.body;
+    const avatarFile = (req as any).file as Express.Multer.File | undefined;
+
+    const dbUser = await UserModel.findById(user._id);
+    if (!dbUser) throw new ApiError(404, "User not found");
+
+    // Update text fields if provided
+    if (name?.trim()) dbUser.name = name.trim();
+    if (about !== undefined) dbUser.about = about;
+
+    // Handle avatar upload
+    if (avatarFile) {
+      // Delete old avatar from Cloudinary if exists
+      if (dbUser.avatarPublicId) {
+        await deleteFromCloudinary(dbUser.avatarPublicId);
+      }
+
+      // Upload new avatar to Cloudinary
+      const uploadResult = await uploadToCloudinary(avatarFile.path);
+      dbUser.avatar = uploadResult.secure_url;
+      dbUser.avatarPublicId = uploadResult.public_id;
+    }
+
+    await dbUser.save();
+
+    return res.status(200).json(
+      new ApiResponse(
+        200,
+        {
+          user: {
+            _id: dbUser._id,
+            name: dbUser.name,
+            username: dbUser.username,
+            email: dbUser.email,
+            avatar: dbUser.avatar,
+            avatarPublicId: dbUser.avatarPublicId,
+            about: dbUser.about,
+          },
+        },
+        "Profile updated successfully",
+      ),
+    );
   },
 );

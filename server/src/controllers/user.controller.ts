@@ -181,7 +181,7 @@ export const updateRequestStatus = asyncHandler(
       title: "Contact Request Update",
       content: `${user.username} has ${status} your request`,
       notificationType: "request",
-    })
+    });
 
     return res
       .status(200)
@@ -207,8 +207,8 @@ export const getContacts = asyncHandler(
     const friendships = await IndividualMessageModel.find({
       $or: [{ user1: user._id }, { user2: user._id }],
     })
-      .populate("user1", "name username email avatar isOnline")
-      .populate("user2", "name username email avatar isOnline")
+      .populate("user1", "name username email avatar about isOnline")
+      .populate("user2", "name username email avatar about isOnline")
       .sort({ updatedAt: -1 });
 
     // Map the results to just return the other user's profile

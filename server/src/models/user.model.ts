@@ -10,6 +10,7 @@ export interface Iuser extends Document {
   about?: string;
   isVerified: boolean;
   avatar?: string;
+  avatarPublicId?: string;
   isOnline: boolean;
   generateToken(): string;
   isPasswordValid(password: string): Promise<boolean>;
@@ -41,6 +42,9 @@ const userSchema = new Schema<Iuser>(
       type: Boolean,
     },
     avatar: {
+      type: String,
+    },
+    avatarPublicId: {
       type: String,
     },
     isOnline: {
