@@ -3,11 +3,13 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
 export interface Iuser extends Document {
+  name: string;
   username: string;
   email: string;
   password: string;
   about?: string;
   isVerified: boolean;
+  avatar?: string;
   isOnline: boolean;
   generateToken(): string;
   isPasswordValid(password: string): Promise<boolean>;
@@ -15,6 +17,10 @@ export interface Iuser extends Document {
 
 const userSchema = new Schema<Iuser>(
   {
+    name: {
+      type: String,
+      required: true,
+    },
     username: {
       type: String,
       unique: true,
@@ -33,6 +39,9 @@ const userSchema = new Schema<Iuser>(
     },
     isVerified: {
       type: Boolean,
+    },
+    avatar: {
+      type: String,
     },
     isOnline: {
       type: Boolean,
@@ -54,6 +63,7 @@ userSchema.methods.generateToken = function () {
   return jwt.sign(
     { id: this._id, username: this.username },
     process.env.JWT_SECRET as string,
+    { expiresIn: "1d" },
   );
 };
 

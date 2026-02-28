@@ -8,9 +8,9 @@ import { NotificationModel } from "../models/notification.model";
 
 export const registerUser = asyncHandler(
   async (req: Request, res: Response) => {
-    const { username, email, password } = req.body;
+    const { name, username, email, password } = req.body;
 
-    if (!username || !email || !password) {
+    if (!name || !username || !email || !password) {
       return res.status(400).json(new ApiError(400, "All fields are required"));
     }
 
@@ -24,6 +24,7 @@ export const registerUser = asyncHandler(
     }
 
     const user = await UserModel.create({
+      name,
       username,
       email,
       password,
@@ -47,7 +48,14 @@ export const registerUser = asyncHandler(
       .json(
         new ApiResponse(
           201,
-          { user: { username: user.username, email: user.email }, token },
+          {
+            user: {
+              name: user.name,
+              username: user.username,
+              email: user.email,
+            },
+            token,
+          },
           "User registered successfully",
         ),
       );
@@ -81,7 +89,10 @@ export const loginUser = asyncHandler(async (req: Request, res: Response) => {
     .json(
       new ApiResponse(
         200,
-        { user: { username: user.username, email: user.email }, token },
+        {
+          user: { name: user.name, username: user.username, email: user.email },
+          token,
+        },
         "User logged in successfully",
       ),
     );
@@ -101,7 +112,13 @@ export const verifyToken = asyncHandler(
       .json(
         new ApiResponse(
           200,
-          { user: { username: user.username, email: user.email } },
+          {
+            user: {
+              name: user.name,
+              username: user.username,
+              email: user.email,
+            },
+          },
           "Token verified",
         ),
       );

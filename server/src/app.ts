@@ -24,10 +24,12 @@ import authRouter from "./routes/auth.routes";
 import userRouter from "./routes/user.routes";
 import taskRouter from "./routes/task.routes";
 import notificationRouter from "./routes/notification.routes";
+import groupRouter from "./routes/group.routes";
 
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/tasks", taskRouter);
 app.use("/api/v1/notifications", notificationRouter);
+app.use("/api/v1/groups", groupRouter);
 
 export { app };

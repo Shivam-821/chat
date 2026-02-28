@@ -32,6 +32,96 @@ export const deleteNotification = asyncHandler(
   },
 );
 
+export const getAllNotifications = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const user = req.user;
+
+    if (!user || !user._id) {
+      throw new ApiError(401, "Unauthorized request");
+    }
+
+    try {
+      const notifications = await NotificationModel.find({
+        user: user._id,
+      });
+      return res
+        .status(200)
+        .json(
+          new ApiResponse(
+            200,
+            { notifications },
+            "Notifications fetched successfully",
+          ),
+        );
+    } catch (error) {
+      return res
+        .status(500)
+        .json(new ApiError(500, "Failed to fetch notifications"));
+    }
+  },
+);
+
+export const getUnreadNotificationsCount = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const user = req.user;
+
+    if (!user || !user._id) {
+      throw new ApiError(401, "Unauthorized request");
+    }
+
+    try {
+      const notifications = await NotificationModel.find({
+        user: user._id,
+        read: false,
+      });
+      return res
+        .status(200)
+        .json(
+          new ApiResponse(
+            200,
+            { notifications },
+            "Notifications fetched successfully",
+          ),
+        );
+    } catch (error) {
+      return res
+        .status(500)
+        .json(new ApiError(500, "Failed to fetch notifications"));
+    }
+  },
+);
+
+export const markNotificationAsRead = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const notification_id = req.params.id;
+    const user = req.user;
+
+    if (!user || !user._id) {
+      throw new ApiError(401, "Unauthorized request");
+    }
+
+    try {
+      await NotificationModel.updateOne(
+        {
+          user: user._id,
+          _id: notification_id,
+        },
+        { $set: { read: true } },
+      );
+    } catch (error) {
+      return res
+        .status(500)
+        .json(new ApiError(500, "Failed to mark notification as read"));
+    }
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(200, {}, "Notification marked as read successfully"),
+      );
+  },
+);
+
 // this will be sent by us when user vist the page and the tasks are pending and day is about to end(IST). Message will be sent only once and if the user hasn't completeed the task before 3 hrs of the end of the day.
 export const sendAlertOfTaskPending = asyncHandler(
   async (req: AuthRequest, res: Response) => {
