@@ -5,11 +5,13 @@ import ThemeButton from "./ThemeButton";
 import { AiFillSetting } from "react-icons/ai";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { useNotifications } from "@/context/NotificationContext";
 
 const NavBar = () => {
   const [openModal, setOpenModal] = useState(false);
   const router = useRouter();
   const { isAuthenticated, logout, user } = useAuth();
+  const { unreadCount } = useNotifications();
   return (
     <div className="h-16 bg-lime-100 dark:bg-neutral-900 flex justify-between items-center px-5 sticky top-0 z-50">
       <div>
@@ -55,11 +57,18 @@ const NavBar = () => {
         )}
       </div>
       <div className="relative">
-        <AiFillSetting
-          size={20}
-          className="hover:rotate-45 transition-all duration-300 cursor-pointer"
-          onClick={() => setOpenModal(!openModal)}
-        />
+        <div className="relative inline-block">
+          <AiFillSetting
+            size={20}
+            className="hover:rotate-45 transition-all duration-300 cursor-pointer"
+            onClick={() => setOpenModal(!openModal)}
+          />
+          {isAuthenticated && unreadCount > 0 && (
+            <span className="absolute -top-2 -right-2 bg-rose-500 text-white dark:text-rose-50 text-[8px] font-bold px-1.5 py-0.5 rounded-full border-2 border-lime-100 dark:border-neutral-900 pointer-events-none">
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </span>
+          )}
+        </div>
         {openModal && (
           <div
             onClick={() => setOpenModal(false)}
@@ -77,9 +86,14 @@ const NavBar = () => {
                 </div>
                 <div
                   onClick={() => router.push("/notifications")}
-                  className="cursor-pointer hover:scale-105 hover:font-semibold mb-1"
+                  className="cursor-pointer hover:scale-105 hover:font-semibold mb-1 flex items-center gap-2"
                 >
                   Notifications
+                  {unreadCount > 0 && (
+                    <span className="bg-rose-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                      {unreadCount}
+                    </span>
+                  )}
                 </div>
                 <div
                   onClick={() => router.push("/tracker")}

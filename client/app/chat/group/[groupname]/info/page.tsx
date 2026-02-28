@@ -1,13 +1,12 @@
 "use client";
 
-import React, { use } from "react";
+import React, { use, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
+import { getGroupByIdApi, leaveGroupApi, deleteGroupApi } from "@/api/api";
 import {
   FaUsers,
   FaArrowLeft,
-  FaBell,
-  FaImage,
-  FaLink,
   FaSearch,
   FaSignOutAlt,
   FaUserCircle,
@@ -21,41 +20,70 @@ interface PageProps {
 
 const GroupInfoPage = ({ params }: PageProps) => {
   const resolvedParams = use(params);
-  const decodedGroupname = decodeURIComponent(resolvedParams.groupname);
+  const groupId = decodeURIComponent(resolvedParams.groupname);
   const router = useRouter();
+  const { token, user } = useAuth();
 
-  const mockMembers = [
-    {
-      id: 1,
-      name: "Alice",
-      role: "Admin",
-      color: "bg-blue-200 dark:bg-blue-900",
-    },
-    {
-      id: 2,
-      name: "Bob",
-      role: "Member",
-      color: "bg-rose-200 dark:bg-rose-900",
-    },
-    {
-      id: 3,
-      name: "Charlie",
-      role: "Member",
-      color: "bg-emerald-200 dark:bg-emerald-900",
-    },
-    {
-      id: 4,
-      name: "Diana",
-      role: "Member",
-      color: "bg-purple-200 dark:bg-purple-900",
-    },
-    {
-      id: 5,
-      name: "Evan",
-      role: "Member",
-      color: "bg-amber-200 dark:bg-amber-900",
-    },
-  ];
+  const [group, setGroup] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const isAdmin = group?.admin?.toString() === user?._id?.toString();
+
+  const handleLeaveOrDelete = async () => {
+    if (!token) return;
+    setIsSubmitting(true);
+    let success = false;
+
+    if (isAdmin) {
+      success = await deleteGroupApi(groupId, token);
+    } else {
+      success = await leaveGroupApi(groupId, token);
+    }
+
+    setIsSubmitting(false);
+    if (success) {
+      router.push("/chat");
+    }
+  };
+
+  useEffect(() => {
+    const fetchGroupInfo = async () => {
+      if (!token) return;
+
+      const data = await getGroupByIdApi(groupId, token);
+      if (data) {
+        setGroup(data);
+      }
+      setLoading(false);
+    };
+
+    fetchGroupInfo();
+  }, [groupId, token]);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col h-[calc(100vh-64px)] w-full bg-[#f8fafc] dark:bg-neutral-950 items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500"></div>
+      </div>
+    );
+  }
+
+  if (!group) {
+    return (
+      <div className="flex flex-col h-[calc(100vh-64px)] w-full bg-[#f8fafc] dark:bg-neutral-950 items-center justify-center p-6 text-center">
+        <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200 mb-2">
+          Group Not Found
+        </h2>
+        <button
+          onClick={() => router.back()}
+          className="text-amber-600 hover:underline"
+        >
+          Go Back
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-[calc(100vh-64px)] w-full bg-[#f8fafc] dark:bg-neutral-950 overflow-y-auto relative">
@@ -88,14 +116,14 @@ const GroupInfoPage = ({ params }: PageProps) => {
 
           <div className="flex flex-col items-center sm:items-start flex-1 text-center sm:text-left mt-2">
             <h2 className="text-3xl font-black text-slate-800 dark:text-slate-100 mb-2">
-              {decodedGroupname}
+              {group.name}
             </h2>
             <p className="text-slate-500 dark:text-neutral-400 font-bold mb-4">
-              Group · {mockMembers.length} Members
+              Group · {group.members?.length || 0} Members
             </p>
             <p className="text-slate-600 dark:text-neutral-300 font-medium bg-amber-50 dark:bg-neutral-700/50 p-4 rounded-2xl border-2 border-dashed border-amber-200 dark:border-neutral-600 w-full">
-              Welcome to {decodedGroupname}! This is a collaborative space for
-              team updates, general chat, and sharing resources.
+              Welcome to {group.name}! This is a collaborative space for team
+              updates, general chat, and sharing resources.
             </p>
           </div>
         </div>
@@ -104,7 +132,7 @@ const GroupInfoPage = ({ params }: PageProps) => {
         <div className="bg-white dark:bg-neutral-800 rounded-3xl p-6 border-[3px] border-slate-800 dark:border-neutral-700 shadow-[6px_6px_0_0_rgba(30,41,59,1)] dark:shadow-[6px_6px_0_0_rgba(23,23,23,1)]">
           <div className="flex items-center justify-between mx-2 mb-6">
             <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200">
-              {mockMembers.length} Members
+              {group.members?.length || 0} Members
             </h3>
             <button className="text-amber-600 dark:text-amber-400 font-bold flex items-center gap-2 hover:bg-amber-50 dark:hover:bg-neutral-700 px-3 py-1.5 rounded-lg transition-colors border-2 border-transparent hover:border-amber-200 dark:hover:border-neutral-600">
               <FaSearch size={14} /> Find
@@ -112,28 +140,32 @@ const GroupInfoPage = ({ params }: PageProps) => {
           </div>
 
           <div className="flex flex-col gap-3">
-            {mockMembers.map((member) => (
+            {group.members?.map((member: any) => (
               <div
-                key={member.id}
+                key={member._id}
                 className="flex items-center gap-4 p-3 rounded-2xl hover:bg-slate-50 dark:hover:bg-neutral-700/50 transition-colors border-2 border-transparent hover:border-slate-200 dark:hover:border-neutral-700 cursor-pointer"
               >
                 <div
-                  className={`w-12 h-12 rounded-xl ${member.color} border-2 border-slate-800 dark:border-neutral-600 flex items-center justify-center shrink-0`}
+                  className={`w-12 h-12 rounded-xl bg-slate-200 dark:bg-neutral-700 border-2 border-slate-800 dark:border-neutral-600 flex items-center justify-center shrink-0 overflow-hidden font-black text-slate-600 dark:text-slate-300`}
                 >
-                  <FaUserCircle
-                    size={28}
-                    className="text-slate-800/80 dark:text-white/80"
-                  />
+                  {member.name ? (
+                    member.name.charAt(0).toUpperCase()
+                  ) : (
+                    <FaUserCircle
+                      size={28}
+                      className="text-slate-800/80 dark:text-white/80"
+                    />
+                  )}
                 </div>
                 <div className="flex-1">
                   <h4 className="font-bold text-slate-800 dark:text-slate-200">
-                    {member.name}
+                    {member.name || "Unknown User"}
                   </h4>
                   <p className="text-sm text-slate-500 dark:text-neutral-400 font-medium">
-                    Never gonna give you up...
+                    @{member.username}
                   </p>
                 </div>
-                {member.role === "Admin" && (
+                {group.admin === member._id && (
                   <span className="bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200 border-2 border-amber-300 dark:border-amber-700 px-3 py-1 rounded-xl text-xs font-bold shadow-sm">
                     Admin
                   </span>
@@ -144,10 +176,31 @@ const GroupInfoPage = ({ params }: PageProps) => {
         </div>
 
         {/* Danger Zone */}
-        <button className="w-full bg-rose-50 dark:bg-rose-900/10 hover:bg-rose-100 dark:hover:bg-rose-900/20 text-rose-600 dark:text-rose-400 font-black p-5 rounded-3xl border-[3px] border-rose-200 dark:border-rose-900/50 flex items-center justify-center gap-3 transition-colors mb-8">
-          <FaSignOutAlt size={20} />
-          Leave Group
-        </button>
+        {isAdmin ? (
+          <div className="flex flex-col gap-2 mb-8">
+            <p className="text-center text-sm font-bold text-slate-500 dark:text-neutral-400">
+              As the administrator, you cannot leave the group. You must delete
+              it entirely.
+            </p>
+            <button
+              onClick={handleLeaveOrDelete}
+              disabled={isSubmitting}
+              className="w-full bg-rose-50 dark:bg-rose-900/10 hover:bg-rose-100 dark:hover:bg-rose-900/20 text-rose-600 dark:text-rose-400 font-black p-5 rounded-3xl border-[3px] border-rose-200 dark:border-rose-900/50 flex items-center justify-center gap-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-lg"
+            >
+              <FaSignOutAlt size={20} />
+              {isSubmitting ? "Processing..." : "Delete Group"}
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={handleLeaveOrDelete}
+            disabled={isSubmitting}
+            className="w-full bg-rose-50 dark:bg-rose-900/10 hover:bg-rose-100 dark:hover:bg-rose-900/20 text-rose-600 dark:text-rose-400 font-black p-5 rounded-3xl border-[3px] border-rose-200 dark:border-rose-900/50 flex items-center justify-center gap-3 transition-colors mb-8 disabled:opacity-50 disabled:cursor-not-allowed text-lg"
+          >
+            <FaSignOutAlt size={20} />
+            {isSubmitting ? "Processing..." : "Leave Group"}
+          </button>
+        )}
       </div>
     </div>
   );

@@ -8,6 +8,7 @@ import { FaUserPlus, FaEnvelope, FaLock, FaUser } from "react-icons/fa";
 import Link from "next/link";
 
 const SignUpPage = () => {
+  const [name, setName] = useState("");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -22,7 +23,7 @@ const SignUpPage = () => {
     setError("");
     setIsLoading(true);
 
-    const response = await registerApi(username, email, password);
+    const response = await registerApi(name, username, email, password);
     if (response) {
       // login automatically on successful registration
       login(response);
@@ -57,6 +58,25 @@ const SignUpPage = () => {
         )}
 
         <form onSubmit={handleSignUp} className="flex flex-col gap-5">
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-bold text-slate-700 dark:text-slate-300 ml-1">
+              Full Name
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-slate-400">
+                <FaUser size={16} />
+              </div>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                placeholder="Alex Developer"
+                className="w-full bg-slate-50 dark:bg-neutral-900 border-2 border-slate-300 dark:border-neutral-600 focus:border-amber-400 dark:focus:border-amber-500 text-slate-800 dark:text-slate-200 rounded-xl pl-11 pr-4 py-3 focus:outline-none transition-colors font-medium shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+              />
+            </div>
+          </div>
+
           <div className="flex flex-col gap-2">
             <label className="text-sm font-bold text-slate-700 dark:text-slate-300 ml-1">
               Username
