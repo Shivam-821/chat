@@ -75,11 +75,15 @@ export const addContactRequest = asyncHandler(
       status: "pending",
     });
 
-    const notification = await NotificationModel.create({
+    await NotificationModel.create({
       user: targetUser._id,
       title: "New contact request",
       content: `${user.username} sent you a contact request`,
       notificationType: "request",
+    });
+
+    req.app.get("io").to(targetUser._id.toString()).emit("received-request", {
+      request: newRequest,
     });
 
     return res
@@ -176,12 +180,14 @@ export const updateRequestStatus = asyncHandler(
       notificationType: "request",
     });
 
-    await NotificationModel.deleteOne({
-      user: request.sender,
-      title: "Contact Request Update",
-      content: `${user.username} has ${status} your request`,
-      notificationType: "request",
-    });
+    // Notify the original sender in real-time
+    req.app
+      .get("io")
+      .to(request.sender.toString())
+      .emit(status === "accepted" ? "accept-request" : "reject-request", {
+        request,
+        individualMessage,
+      });
 
     return res
       .status(200)
