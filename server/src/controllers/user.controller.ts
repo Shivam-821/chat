@@ -43,8 +43,10 @@ export const addContactRequest = asyncHandler(
 
     // Check if request already exists
     const existingRequest = await RequestModel.findOne({
-      sender: user._id,
-      receiver: targetUser._id,
+      $or: [
+        { sender: user._id, receiver: targetUser._id },
+        { sender: targetUser._id, receiver: user._id },
+      ],
     });
 
     const existingIndividual = await IndividualMessageModel.findOne({
