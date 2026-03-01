@@ -38,6 +38,7 @@ const IndividualChatPage = ({ params }: PageProps) => {
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
 
   const { encryptMsg, decryptMsg, isE2EReady } = useE2E();
 
@@ -113,7 +114,10 @@ const IndividualChatPage = ({ params }: PageProps) => {
 
   // Socket: incoming messages
   useEffect(() => {
+    if (!socket) return;
+
     const handler = async (data: {
+      _id?: string;
       senderId: string;
       message: string;
       createdAt?: string;
@@ -122,15 +126,56 @@ const IndividualChatPage = ({ params }: PageProps) => {
       setMessages((prev) => [
         ...prev,
         {
+          _id: data._id,
           senderId: data.senderId,
           message: plaintext,
           createdAt: data.createdAt || new Date().toISOString(),
         },
       ]);
     };
+
+    const editHandler = async (data: {
+      messageId: string;
+      newText: string;
+    }) => {
+      const plaintext = await decryptPayload(data.newText);
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg._id === data.messageId
+            ? { ...msg, message: plaintext, edited: true }
+            : msg,
+        ),
+      );
+    };
+
+    const deleteHandler = (data: { messageId: string }) => {
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg._id === data.messageId
+            ? { ...msg, message: "🚫 This message was deleted", deleted: true }
+            : msg,
+        ),
+      );
+    };
+
+    const successHandler = (data: { tempId: string; realId: string }) => {
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg._id === data.tempId ? { ...msg, _id: data.realId } : msg,
+        ),
+      );
+    };
+
     socket.on("receive-message", handler);
+    socket.on("message-edited", editHandler);
+    socket.on("message-deleted", deleteHandler);
+    socket.on("message-sent-success", successHandler);
+
     return () => {
       socket.off("receive-message", handler);
+      socket.off("message-edited", editHandler);
+      socket.off("message-deleted", deleteHandler);
+      socket.off("message-sent-success", successHandler);
     };
   }, [socket, decryptPayload]);
 
@@ -188,24 +233,45 @@ const IndividualChatPage = ({ params }: PageProps) => {
       return;
     }
 
-    const payload = {
-      senderId: user._id,
-      receiverId: contact._id,
-      message: JSON.stringify(encryptedData),
-      senderName: user.name,
-    };
+    if (editingMessageId) {
+      socket.emit("edit-message", {
+        messageId: editingMessageId,
+        newText: JSON.stringify(encryptedData),
+        receiverId: contact._id,
+      });
 
-    socket.emit("send-message", payload);
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg._id === editingMessageId
+            ? { ...msg, message: plaintext, edited: true }
+            : msg,
+        ),
+      );
+      setEditingMessageId(null);
+    } else {
+      const tempId = Date.now().toString();
 
-    // Optimistic UI update with plaintext
-    setMessages((prev) => [
-      ...prev,
-      {
+      const payload = {
         senderId: user._id,
-        message: plaintext,
-        createdAt: new Date().toISOString(),
-      },
-    ]);
+        receiverId: contact._id,
+        message: JSON.stringify(encryptedData),
+        senderName: user.name,
+        tempId,
+      };
+
+      socket.emit("send-message", payload);
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          senderId: user._id,
+          message: plaintext,
+          createdAt: new Date().toISOString(),
+          _id: tempId,
+        },
+      ]);
+    }
+
     setInputMessage("");
   };
 
@@ -226,8 +292,30 @@ const IndividualChatPage = ({ params }: PageProps) => {
     );
   }
 
+  const handleEditMessage = (msg: DisplayMessage) => {
+    if (!msg._id) return;
+    setInputMessage(msg.message);
+    setEditingMessageId(msg._id);
+  };
+
+  const handleDeleteMessage = (msg: DisplayMessage) => {
+    if (!msg._id) return;
+    socket.emit("delete-message", {
+      messageId: msg._id,
+      receiverId: contact?._id,
+    });
+    // Optimistic Delete Update
+    setMessages((prev) =>
+      prev.map((m) =>
+        m._id === msg._id
+          ? { ...m, message: "🚫 This message was deleted", deleted: true }
+          : m,
+      ),
+    );
+  };
+
   return (
-    <div className="flex flex-col h-full bg-lime-50 dark:bg-neutral-950 w-full relative">
+    <div className="flex flex-col h-full bg-lime-50 dark:bg-neutral-950 w-full relative overflow-hidden">
       {/* Chat Header */}
       <div className="shrink-0 flex items-center justify-between px-6 py-3 border-b border-lime-200 dark:border-neutral-800 bg-[#e2fbb3] dark:bg-[#1c1c1c] shadow-sm z-10 w-full">
         <div className="flex items-center gap-4">
@@ -275,19 +363,43 @@ const IndividualChatPage = ({ params }: PageProps) => {
       </div>
 
       {/* Isolated scrollable messages */}
-      <ChatMessages
-        messages={messages}
-        currentUserId={user?._id ?? ""}
-        hasMore={hasMore}
-        loadingMore={loadingMore}
-        onLoadMore={handleLoadMore}
-        contact={contact}
-        emptyText="No messages yet. Say hi! 👋"
-      />
+      <div className="flex-1 overflow-hidden relative">
+        <div className="absolute inset-0 flex flex-col">
+          <ChatMessages
+            messages={messages}
+            currentUserId={user?._id ?? ""}
+            hasMore={hasMore}
+            loadingMore={loadingMore}
+            onLoadMore={handleLoadMore}
+            contact={contact}
+            emptyText="No messages yet. Say hi! 👋"
+            onEditMessage={handleEditMessage}
+            onDeleteMessage={handleDeleteMessage}
+          />
+        </div>
+      </div>
 
       {/* Input Area */}
       <div className="shrink-0 p-4 bg-lime-100 dark:bg-neutral-900 border-t border-lime-200 dark:border-neutral-800 w-full">
-        <div className="max-w-4xl mx-auto bg-white dark:bg-neutral-800 rounded-full flex items-center px-4 py-2 shadow-sm border border-slate-200 dark:border-neutral-700 focus-within:ring-2 focus-within:ring-lime-400 dark:focus-within:ring-lime-600 transition-shadow">
+        {editingMessageId && (
+          <div className="max-w-4xl mx-auto flex items-center justify-between bg-lime-200 dark:bg-lime-900/50 px-4 py-2 rounded-t-xl mb-[-10px] pb-3 text-sm text-lime-800 dark:text-lime-200 border border-lime-300 dark:border-lime-700/50 border-b-0">
+            <span className="font-medium flex items-center gap-2">
+              <span className="animate-pulse">✏️</span> Editing message
+            </span>
+            <button
+              onClick={() => {
+                setEditingMessageId(null);
+                setInputMessage("");
+              }}
+              className="text-lime-600 dark:text-lime-400 hover:text-rose-500 font-bold px-2 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+        <div
+          className={`max-w-4xl mx-auto bg-white dark:bg-neutral-800 rounded-full flex items-center px-4 py-2 shadow-sm border border-slate-200 dark:border-neutral-700 focus-within:ring-2 focus-within:ring-lime-400 dark:focus-within:ring-lime-600 transition-shadow relative z-10 ${editingMessageId ? "rounded-tl-none rounded-tr-none border-t-0" : ""}`}
+        >
           <FaSmile className="text-slate-400 hover:text-amber-500 cursor-pointer transition-colors text-xl mr-3" />
           <FaPaperclip className="text-slate-400 hover:text-amber-500 cursor-pointer transition-colors text-xl mr-3" />
           <input
@@ -314,9 +426,11 @@ function toDisplay(m: ChatMessage): DisplayMessage {
   return {
     _id: m._id,
     senderId: m.sender._id,
-    message: m.message,
+    message: m.deleted ? "🚫 This message was deleted" : m.message,
     senderAvatar: m.sender.avatar,
     createdAt: m.createdAt,
+    edited: m.edited,
+    deleted: m.deleted,
   };
 }
 

@@ -503,6 +503,8 @@ export interface ChatMessage {
   message: string;
   chatType: "IndividualMessage" | "Group";
   createdAt: string;
+  edited?: boolean;
+  deleted?: boolean;
 }
 
 export const getIndividualMessagesApi = async (

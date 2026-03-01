@@ -44,6 +44,7 @@ const GroupChatPage = ({ params }: PageProps) => {
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
 
   // Fetch group
   useEffect(() => {
@@ -74,7 +75,10 @@ const GroupChatPage = ({ params }: PageProps) => {
 
   // Socket: incoming group messages
   useEffect(() => {
+    if (!socket) return;
+
     const handler = (data: {
+      _id?: string;
       senderId: string;
       senderName: string;
       senderAvatar?: string;
@@ -84,6 +88,7 @@ const GroupChatPage = ({ params }: PageProps) => {
       setMessages((prev) => [
         ...prev,
         {
+          _id: data._id,
           senderId: data.senderId,
           message: data.message,
           senderName: data.senderName,
@@ -92,9 +97,45 @@ const GroupChatPage = ({ params }: PageProps) => {
         },
       ]);
     };
+
+    const editHandler = (data: { messageId: string; newText: string }) => {
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg._id === data.messageId
+            ? { ...msg, message: data.newText, edited: true }
+            : msg,
+        ),
+      );
+    };
+
+    const deleteHandler = (data: { messageId: string }) => {
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg._id === data.messageId
+            ? { ...msg, message: "🚫 This message was deleted", deleted: true }
+            : msg,
+        ),
+      );
+    };
+
+    const successHandler = (data: { tempId: string; realId: string }) => {
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg._id === data.tempId ? { ...msg, _id: data.realId } : msg,
+        ),
+      );
+    };
+
     socket.on("receive-group-message", handler);
+    socket.on("message-edited", editHandler);
+    socket.on("message-deleted", deleteHandler);
+    socket.on("message-sent-success", successHandler);
+
     return () => {
       socket.off("receive-group-message", handler);
+      socket.off("message-edited", editHandler);
+      socket.off("message-deleted", deleteHandler);
+      socket.off("message-sent-success", successHandler);
     };
   }, [socket]);
 
@@ -113,26 +154,73 @@ const GroupChatPage = ({ params }: PageProps) => {
 
   const sendMessage = () => {
     if (!inputMessage.trim() || !user?._id || !group?._id) return;
-    const payload = {
-      senderId: user._id,
-      senderName: user.name,
-      senderAvatar: user.avatar,
-      groupId: group._id,
-      groupName: group.name,
-      message: inputMessage.trim(),
-    };
-    socket.emit("send-group-message", payload);
-    setMessages((prev) => [
-      ...prev,
-      {
+
+    if (editingMessageId) {
+      socket.emit("edit-message", {
+        messageId: editingMessageId,
+        newText: inputMessage.trim(),
+        groupId: group._id,
+      });
+
+      // Optimistic Edit
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg._id === editingMessageId
+            ? { ...msg, message: inputMessage.trim(), edited: true }
+            : msg,
+        ),
+      );
+      setEditingMessageId(null);
+    } else {
+      const tempId = Date.now().toString();
+
+      const payload = {
         senderId: user._id,
-        message: inputMessage.trim(),
         senderName: user.name,
         senderAvatar: user.avatar,
-        createdAt: new Date().toISOString(),
-      },
-    ]);
+        groupId: group._id,
+        groupName: group.name,
+        message: inputMessage.trim(),
+        tempId,
+      };
+
+      socket.emit("send-group-message", payload);
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          senderId: user._id,
+          message: inputMessage.trim(),
+          senderName: user.name,
+          senderAvatar: user.avatar,
+          createdAt: new Date().toISOString(),
+          _id: tempId,
+        },
+      ]);
+    }
     setInputMessage("");
+  };
+
+  const handleEditMessage = (msg: DisplayMessage) => {
+    if (!msg._id) return;
+    setInputMessage(msg.message);
+    setEditingMessageId(msg._id);
+  };
+
+  const handleDeleteMessage = (msg: DisplayMessage) => {
+    if (!msg._id || !group?._id) return;
+    socket.emit("delete-message", {
+      messageId: msg._id,
+      groupId: group._id,
+    });
+    // Optimistic Delete
+    setMessages((prev) =>
+      prev.map((m) =>
+        m._id === msg._id
+          ? { ...m, message: "🚫 This message was deleted", deleted: true }
+          : m,
+      ),
+    );
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -153,7 +241,7 @@ const GroupChatPage = ({ params }: PageProps) => {
   }
 
   return (
-    <div className="flex flex-col h-full bg-amber-50 dark:bg-neutral-950 w-full relative">
+    <div className="flex flex-col h-full bg-amber-50 dark:bg-neutral-950 w-full relative overflow-hidden">
       {/* Header */}
       <div className="shrink-0 flex items-center justify-between px-6 py-3 border-b border-amber-200 dark:border-neutral-800 bg-[#e2fbb3] dark:bg-[#1c1c1c] shadow-sm w-full">
         <div className="flex items-center gap-4">
@@ -187,20 +275,44 @@ const GroupChatPage = ({ params }: PageProps) => {
       </div>
 
       {/* Isolated scrollable messages */}
-      <ChatMessages
-        messages={messages}
-        currentUserId={user?._id ?? ""}
-        hasMore={hasMore}
-        loadingMore={loadingMore}
-        onLoadMore={handleLoadMore}
-        showSenderInfo={true}
-        colorForSender={colorForSender}
-        emptyText="No messages yet. Start the conversation! 🎉"
-      />
+      <div className="flex-1 overflow-hidden relative">
+        <div className="absolute inset-0 flex flex-col">
+          <ChatMessages
+            messages={messages}
+            currentUserId={user?._id ?? ""}
+            hasMore={hasMore}
+            loadingMore={loadingMore}
+            onLoadMore={handleLoadMore}
+            showSenderInfo={true}
+            colorForSender={colorForSender}
+            emptyText="No messages yet. Start the conversation! 🎉"
+            onEditMessage={handleEditMessage}
+            onDeleteMessage={handleDeleteMessage}
+          />
+        </div>
+      </div>
 
       {/* Input */}
       <div className="shrink-0 p-4 bg-amber-100 dark:bg-neutral-900 border-t border-amber-200 dark:border-neutral-800 w-full">
-        <div className="max-w-4xl mx-auto bg-white dark:bg-neutral-800 rounded-full flex items-center px-4 py-2 shadow-sm border border-slate-200 dark:border-neutral-700 focus-within:ring-2 focus-within:ring-amber-400 dark:focus-within:ring-amber-600 transition-shadow">
+        {editingMessageId && (
+          <div className="max-w-4xl mx-auto flex items-center justify-between bg-amber-200 dark:bg-amber-900/50 px-4 py-2 rounded-t-xl mb-[-10px] pb-3 text-sm text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-700/50 border-b-0">
+            <span className="font-medium flex items-center gap-2">
+              <span className="animate-pulse">✏️</span> Editing message
+            </span>
+            <button
+              onClick={() => {
+                setEditingMessageId(null);
+                setInputMessage("");
+              }}
+              className="text-amber-600 dark:text-amber-400 hover:text-rose-500 font-bold px-2 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+        <div
+          className={`max-w-4xl mx-auto bg-white dark:bg-neutral-800 rounded-full flex items-center px-4 py-2 shadow-sm border border-slate-200 dark:border-neutral-700 focus-within:ring-2 focus-within:ring-amber-400 dark:focus-within:ring-amber-600 transition-shadow relative z-10 ${editingMessageId ? "rounded-tl-none rounded-tr-none border-t-0" : ""}`}
+        >
           <FaSmile className="text-slate-400 hover:text-amber-500 cursor-pointer transition-colors text-xl mr-3" />
           <FaPaperclip className="text-slate-400 hover:text-amber-500 cursor-pointer transition-colors text-xl mr-3" />
           <input
@@ -227,10 +339,12 @@ function toDisplay(m: ChatMessage): DisplayMessage {
   return {
     _id: m._id,
     senderId: m.sender._id,
-    message: m.message,
+    message: m.deleted ? "🚫 This message was deleted" : m.message,
     senderName: m.sender.name,
     senderAvatar: m.sender.avatar,
     createdAt: m.createdAt,
+    edited: m.edited,
+    deleted: m.deleted,
   };
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useCallback } from "react";
+import React, { useEffect, useRef, useCallback, useState } from "react";
 
 export interface DisplayMessage {
   _id?: string;
@@ -9,6 +9,8 @@ export interface DisplayMessage {
   senderName?: string;
   senderAvatar?: string;
   createdAt?: string;
+  edited?: boolean;
+  deleted?: boolean;
 }
 
 interface ChatMessagesProps {
@@ -23,6 +25,8 @@ interface ChatMessagesProps {
   showSenderInfo?: boolean;
   colorForSender?: (id: string) => string;
   emptyText?: string;
+  onEditMessage?: (msg: DisplayMessage) => void;
+  onDeleteMessage?: (msg: DisplayMessage) => void;
 }
 
 const ChatMessages = ({
@@ -35,10 +39,15 @@ const ChatMessages = ({
   showSenderInfo = false,
   colorForSender,
   emptyText = "No messages yet.",
+  onEditMessage,
+  onDeleteMessage,
 }: ChatMessagesProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const isFirstLoad = useRef(true);
+  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(
+    null,
+  );
 
   // Scroll to bottom on first load only
   useEffect(() => {
@@ -130,34 +139,98 @@ const ChatMessages = ({
                 )}
               </div>
             )}
-            <div>
-              {!isSelf && showSenderInfo && msg.senderName && (
-                <span className="text-xs text-slate-500 dark:text-slate-400 mb-1 block ml-1">
-                  {msg.senderName}
-                </span>
+            <div className="relative group flex items-center">
+              {/* Inline Message Options Popup */}
+              {selectedMessageId === (msg._id || idx.toString()) && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setSelectedMessageId(null)}
+                  />
+                  <div className="absolute top-1/2 -translate-y-1/2 right-[105%] mr-2 z-50 flex flex-col gap-1 bg-white dark:bg-neutral-800 shadow-xl border border-slate-200 dark:border-neutral-700 rounded-xl p-1.5 min-w-[140px] animate-in fade-in zoom-in duration-200">
+                    {/* Only show Edit if within 3 minutes of sending */}
+                    {(!msg.createdAt ||
+                      Date.now() - new Date(msg.createdAt).getTime() <=
+                        3 * 60 * 1000) && (
+                      <button
+                        onClick={() => {
+                          if (onEditMessage) onEditMessage(msg);
+                          setSelectedMessageId(null);
+                        }}
+                        className="w-full text-left px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-lime-50 dark:hover:bg-neutral-700 rounded-lg transition-colors font-medium flex items-center justify-between"
+                      >
+                        Edit <span>✏️</span>
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        if (onDeleteMessage) onDeleteMessage(msg);
+                        setSelectedMessageId(null);
+                      }}
+                      className="w-full text-left px-3 py-2 text-sm text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors font-medium flex items-center justify-between"
+                    >
+                      Delete <span>🗑️</span>
+                    </button>
+                  </div>
+                </>
               )}
-              <div
-                className={`p-4 rounded-2xl shadow-sm min-w-[80px] ${
-                  isSelf
-                    ? "bg-lime-200 dark:bg-lime-900 rounded-br-sm text-slate-800 dark:text-slate-100"
-                    : "bg-white dark:bg-neutral-800 rounded-bl-sm border border-slate-100 dark:border-neutral-700 text-slate-700 dark:text-slate-200"
-                }`}
-              >
-                <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
-                {msg.createdAt && (
-                  <p
-                    className={`text-[10px] mt-1 text-right font-medium ${
-                      isSelf
-                        ? "text-lime-700 dark:text-lime-300"
-                        : "text-slate-400 dark:text-slate-500"
+
+              <div className="flex flex-col">
+                {!isSelf && showSenderInfo && msg.senderName && (
+                  <span className="text-xs text-slate-500 dark:text-slate-400 mb-1 block ml-1">
+                    {msg.senderName}
+                  </span>
+                )}
+                <div
+                  onDoubleClick={() => {
+                    if (isSelf && !msg.deleted) {
+                      setSelectedMessageId(
+                        selectedMessageId === (msg._id || idx.toString())
+                          ? null
+                          : msg._id || idx.toString(),
+                      );
+                    }
+                  }}
+                  className={`p-4 rounded-2xl shadow-sm min-w-[100px] transition-all relative ${
+                    isSelf
+                      ? "bg-lime-200 dark:bg-lime-900 rounded-br-sm text-slate-800 dark:text-slate-100 cursor-pointer hover:brightness-95"
+                      : "bg-white dark:bg-neutral-800 rounded-bl-sm border border-slate-100 dark:border-neutral-700 text-slate-700 dark:text-slate-200"
+                  } ${msg.deleted ? "opacity-60 italic" : ""}`}
+                >
+                  {msg.deleted ? (
+                    <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                      🚫 This message was deleted
+                    </p>
+                  ) : (
+                    <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
+                  )}
+
+                  <div
+                    className={`mt-1 flex items-center gap-1.5 ${
+                      isSelf ? "justify-end" : "justify-start"
                     }`}
                   >
-                    {new Date(msg.createdAt).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
-                )}
+                    {msg.edited && !msg.deleted && (
+                      <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                        (edited)
+                      </span>
+                    )}
+                    {msg.createdAt && (
+                      <p
+                        className={`text-[10px] font-medium ${
+                          isSelf
+                            ? "text-lime-700 dark:text-lime-300"
+                            : "text-slate-400 dark:text-slate-500"
+                        }`}
+                      >
+                        {new Date(msg.createdAt).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
