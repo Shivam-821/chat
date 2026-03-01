@@ -7,6 +7,7 @@ import {
   saveIndividualMessage,
   saveGroupMessage,
 } from "./controllers/message.controller";
+import { MessageModel } from "./models/message.model";
 
 // Cache group members
 const groupCache = new Map<string, string[]>();
@@ -74,18 +75,34 @@ export const initSocketListeners = (io: Server) => {
         receiverId: string;
         message: string;
         senderName: string;
+        tempId?: string;
       }) => {
         const roomId = [data.senderId, data.receiverId].sort().join("_");
 
-        socket.to(roomId).emit("receive-message", data);
-        io.to(data.receiverId).emit("receive-notification", data);
+        try {
+          // Persist to DB (blocking for ID return)
+          const savedMessage = await saveIndividualMessage(
+            data.senderId,
+            data.receiverId,
+            data.message,
+          );
 
-        // Persist to DB (non-blocking)
-        saveIndividualMessage(
-          data.senderId,
-          data.receiverId,
-          data.message,
-        ).catch((err) => console.error("[saveIndividualMessage]:", err));
+          if (savedMessage) {
+            const broadcastData = { ...data, _id: savedMessage._id };
+            socket.to(roomId).emit("receive-message", broadcastData);
+            io.to(data.receiverId).emit("receive-notification", broadcastData);
+
+            // Inform sender of real ID
+            if (data.tempId) {
+              socket.emit("message-sent-success", {
+                tempId: data.tempId,
+                realId: savedMessage._id,
+              });
+            }
+          }
+        } catch (err) {
+          console.error("[saveIndividualMessage]:", err);
+        }
       },
     );
 
@@ -98,34 +115,123 @@ export const initSocketListeners = (io: Server) => {
         groupName: string;
         message: string;
         senderName: string;
+        tempId?: string;
       }) => {
-        socket.to(data.groupId).emit("receive-group-message", data);
-
-        let members = groupCache.get(data.groupId);
-
-        if (!members) {
-          const group = await GroupModel.findById(data.groupId).select(
-            "members",
+        try {
+          const savedMessage = await saveGroupMessage(
+            data.senderId,
+            data.groupId,
+            data.message,
           );
-          if (!group) return;
-          members = group.members.map((m: any) => m.toString());
-          groupCache.set(data.groupId, members);
-        }
 
-        members.forEach((memberId) => {
-          if (memberId !== data.senderId) {
-            io.to(memberId).emit("receive-notification", {
-              senderName: data.senderName,
-              message: data.message,
-              groupName: data.groupName,
+          if (savedMessage) {
+            const broadcastData = { ...data, _id: savedMessage._id.toString() };
+            socket
+              .to(data.groupId)
+              .emit("receive-group-message", broadcastData);
+
+            // Inform sender of real ID
+            if (data.tempId) {
+              socket.emit("message-sent-success", {
+                tempId: data.tempId,
+                realId: savedMessage._id.toString(),
+              });
+            }
+
+            let members = groupCache.get(data.groupId);
+
+            if (!members) {
+              const group = await GroupModel.findById(data.groupId).select(
+                "members",
+              );
+              if (!group) return;
+              members = group.members.map((m: any) => m.toString());
+              groupCache.set(data.groupId, members);
+            }
+
+            members.forEach((memberId) => {
+              if (memberId !== data.senderId) {
+                io.to(memberId).emit("receive-notification", broadcastData);
+              }
             });
           }
-        });
+        } catch (err) {
+          console.error("[saveGroupMessage]:", err);
+        }
+      },
+    );
 
-        // Persist to DB (non-blocking)
-        saveGroupMessage(data.senderId, data.groupId, data.message).catch(
-          (err) => console.error("[saveGroupMessage]:", err),
-        );
+    // EDIT MESSAGE
+    socket.on(
+      "edit-message",
+      async (data: {
+        messageId: string;
+        newText: string;
+        receiverId?: string;
+        groupId?: string;
+      }) => {
+        try {
+          const { messageId, newText, receiverId, groupId } = data;
+          const msg = await MessageModel.findById(messageId);
+
+          if (!msg || msg.sender.toString() !== (socket as any).userId) return; // Only sender can edit
+
+          msg.message = newText;
+          msg.edited = true;
+          await msg.save();
+
+          const payload = { messageId, newText, isGroup: !!groupId };
+
+          if (groupId) {
+            socket.to(groupId).emit("message-edited", payload);
+            // Inform sender too for optimistic UI update confirmation
+            socket.emit("message-edited", payload);
+          } else if (receiverId) {
+            const roomId = [(socket as any).userId, receiverId]
+              .sort()
+              .join("_");
+            socket.to(roomId).emit("message-edited", payload);
+            socket.emit("message-edited", payload);
+          }
+        } catch (err) {
+          console.error("[edit-message error]:", err);
+        }
+      },
+    );
+
+    // DELETE MESSAGE
+    socket.on(
+      "delete-message",
+      async (data: {
+        messageId: string;
+        receiverId?: string;
+        groupId?: string;
+      }) => {
+        try {
+          const { messageId, receiverId, groupId } = data;
+          const msg = await MessageModel.findById(messageId);
+
+          if (!msg || msg.sender.toString() !== (socket as any).userId) return; // Only sender can delete
+
+          msg.deleted = true;
+          msg.message = "This message was deleted"; // Overwrite encrypted text for safety
+          await msg.save();
+
+          const payload = { messageId, isGroup: !!groupId };
+
+          if (groupId) {
+            socket.to(groupId).emit("message-deleted", payload);
+            socket.emit("message-deleted", payload);
+          } else if (receiverId) {
+            const roomId = [(socket as any).userId, receiverId]
+              .sort()
+              .join("_");
+            socket.to(roomId).emit("message-deleted", payload);
+            socket.emit("message-deleted", payload);
+          }
+        } catch (err) {
+          console.error("[delete-message error]:", err);
+        }
       },
     );
 
