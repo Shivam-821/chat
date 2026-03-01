@@ -67,6 +67,26 @@ export const initSocketListeners = (io: Server) => {
       console.log(`Joined group ${data.groupId}`);
     });
 
+    // TYPING INDICATOR (INDIVIDUAL)
+    socket.on("typing", (data: { senderId: string; receiverId: string }) => {
+      const roomId = [data.senderId, data.receiverId].sort().join("_");
+      socket.to(roomId).emit("typing", {
+        senderId: data.senderId,
+      });
+    });
+
+    // TYPING INDICATOR (GROUP)
+    socket.on(
+      "group-typing",
+      (data: { senderId: string; senderName: string; groupId: string }) => {
+        socket.to(data.groupId).emit("group-typing", {
+          senderId: data.senderId,
+          senderName: data.senderName,
+          groupId: data.groupId,
+        });
+      },
+    );
+
     // PRIVATE MESSAGE
     socket.on(
       "send-message",

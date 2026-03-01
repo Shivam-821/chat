@@ -12,6 +12,7 @@ export interface Iuser extends Document {
   avatar?: string;
   avatarPublicId?: string;
   isOnline: boolean;
+  maxlogin: number;
   generateToken(): string;
   isPasswordValid(password: string): Promise<boolean>;
 }
@@ -37,6 +38,11 @@ const userSchema = new Schema<Iuser>(
     },
     about: {
       type: String,
+    },
+    maxlogin: {
+      type: Number,
+      max: 2,
+      default: 0,
     },
     isVerified: {
       type: Boolean,

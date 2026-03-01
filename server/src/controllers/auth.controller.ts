@@ -29,6 +29,7 @@ export const registerUser = asyncHandler(
       username,
       email,
       password,
+      maxlogin: 1,
       isVerified: false,
       isOnline: true,
     });
@@ -82,6 +83,14 @@ export const loginUser = asyncHandler(async (req: Request, res: Response) => {
   if (!isPasswordValid) {
     return res.status(401).json(new ApiError(401, "Invalid credentials"));
   }
+  const maxlogin = user.maxlogin + 1;
+  if (maxlogin > 2) {
+    return res
+      .status(400)
+      .json(new ApiError(400, "You cannot login to more than 2 devices"));
+  }
+  user.maxlogin = maxlogin;
+  await user.save();
 
   const token = user.generateToken();
 
@@ -134,6 +143,24 @@ export const verifyToken = asyncHandler(
         "Token verified",
       ),
     );
+  },
+);
+
+export const logoutUser = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const userId = req.user;
+
+    const user = await UserModel.findById(userId);
+    if (!user) {
+      return res.status(404).json(new ApiError(404, "User not found"));
+    }
+
+    user.maxlogin = user.maxlogin - 1;
+    await user.save();
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, {}, "User logged out successfully"));
   },
 );
 
