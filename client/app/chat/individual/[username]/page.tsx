@@ -1,6 +1,7 @@
 "use client";
 
 import React, { use, useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import {
   FaPhoneAlt,
   FaVideo,
@@ -45,6 +46,8 @@ const IndividualChatPage = ({ params }: PageProps) => {
 
   const { encryptMsg, decryptMsg, isE2EReady } = useE2E();
 
+  const router = useRouter();
+
   // Fetch contact
   useEffect(() => {
     const fetchContact = async () => {
@@ -56,11 +59,16 @@ const IndividualChatPage = ({ params }: PageProps) => {
           setContact(found);
           const keys = await getKeysApi(found._id, token);
           if (keys?.publicKey) setContactPublicKey(keys.publicKey);
+        } else {
+          // If the user isn't in contacts, redirect away
+          router.push("/chat");
         }
+      } else {
+        router.push("/chat");
       }
     };
     fetchContact();
-  }, [token, decodedUsername]);
+  }, [token, decodedUsername, router]);
 
   const decryptPayload = useCallback(
     async (msgText: string) => {

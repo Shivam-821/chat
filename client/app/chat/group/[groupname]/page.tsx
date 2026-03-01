@@ -54,10 +54,15 @@ const GroupChatPage = ({ params }: PageProps) => {
     const fetchGroup = async () => {
       if (!token) return;
       const data = await getGroupByNameApi(decodedGroupname, token);
-      if (data) setGroup(data);
+      if (data) {
+        setGroup(data);
+      } else {
+        // Redirect to main chat area if group not found
+        router.push("/chat");
+      }
     };
     fetchGroup();
-  }, [token, decodedGroupname]);
+  }, [token, decodedGroupname, router]);
 
   // Join room + load first 25
   useEffect(() => {

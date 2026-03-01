@@ -206,44 +206,55 @@ export const E2EProvider = ({ children }: { children: ReactNode }) => {
     >
       {/* Encryption Password Prompt Modal */}
       {showPasswordPrompt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-[#2a3942] w-full max-w-md p-8 rounded-2xl shadow-2xl flex flex-col items-center">
-            <div className="bg-[#00a884] p-4 rounded-full mb-6 relative">
-              <Lock className="w-10 h-10 text-[#202c33]" />
-              <KeyRound className="w-5 h-5 text-[#202c33] absolute -bottom-1 -right-1" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4">
+          <div className="bg-white dark:bg-neutral-800 w-full max-w-md p-8 rounded-3xl border-[3px] border-slate-800 dark:border-neutral-700 shadow-[8px_8px_0_0_rgba(30,41,59,1)] dark:shadow-[8px_8px_0_0_rgba(23,23,23,1)] flex flex-col items-center relative overflow-hidden">
+            {/* Playful Background Elements */}
+            <div className="absolute top-[-10%] right-[-10%] w-32 h-32 bg-amber-300/20 dark:bg-amber-900/20 rounded-full mix-blend-multiply filter blur-2xl opacity-60 pointer-events-none"></div>
+            <div className="absolute bottom-[-10%] left-[-10%] w-32 h-32 bg-emerald-300/20 dark:bg-emerald-900/20 rounded-full mix-blend-multiply filter blur-2xl opacity-60 pointer-events-none"></div>
+
+            <div className="bg-emerald-100 dark:bg-emerald-900/30 p-5 rounded-full mb-6 relative border-2 border-emerald-500/30 shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)]">
+              <Lock className="w-10 h-10 text-emerald-600 dark:text-emerald-400" />
+              <div className="absolute -bottom-2 -right-2 bg-white dark:bg-neutral-800 rounded-full p-1.5 border border-slate-200 dark:border-neutral-700 shadow-sm">
+                <KeyRound className="w-5 h-5 text-amber-500" />
+              </div>
             </div>
 
-            <h2 className="text-2xl font-semibold text-gray-100 mb-2 text-center">
+            <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 mb-3 text-center tracking-tight">
               {promptMode === "create"
-                ? "Set Encryption Password"
-                : "Enter Encryption Password"}
+                ? "Secure Your Chats"
+                : "Unlock Your Chats"}
             </h2>
-            <p className="text-gray-400 text-center mb-6 text-sm">
+            <p className="text-slate-500 dark:text-neutral-400 font-medium text-center mb-8 text-sm leading-relaxed px-2">
               {promptMode === "create"
-                ? "Create a secure password to backup your End-to-End Encryption keys. You will need this to restore your messages on a new device."
-                : "Enter your secure password to restore your End-to-End Encryption keys and decrypt your conversations."}
+                ? "Create a powerful password to encrypt your conversations. Keep it safe to restore your messages on a new device."
+                : "Enter your secure password to restore your End-to-End Encryption keys and access your conversations."}
             </p>
 
-            <form onSubmit={handlePasswordSubmit} className="w-full">
-              <input
-                type="password"
-                placeholder="Secure Password..."
-                value={passwordInput}
-                onChange={(e) => setPasswordInput(e.target.value)}
-                autoFocus
-                className="w-full p-4 bg-[#202c33] text-gray-100 border border-[#3b4a54] rounded-xl focus:outline-none focus:border-[#00a884] mb-4 placeholder-gray-500"
-              />
+            <form
+              onSubmit={handlePasswordSubmit}
+              className="w-full flex flex-col gap-5 relative z-10"
+            >
+              <div className="relative">
+                <input
+                  type="password"
+                  placeholder="Encryption Password..."
+                  value={passwordInput}
+                  onChange={(e) => setPasswordInput(e.target.value)}
+                  autoFocus
+                  className="w-full bg-slate-50 dark:bg-neutral-900 border-2 border-slate-300 dark:border-neutral-600 focus:border-emerald-500 dark:focus:border-emerald-400 text-slate-800 dark:text-slate-200 rounded-xl pl-4 pr-4 py-3 focus:outline-none transition-colors font-medium shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] placeholder-slate-400 dark:placeholder-neutral-500"
+                />
+              </div>
               <button
                 type="submit"
                 disabled={loading || !passwordInput.trim()}
-                className="w-full p-4 bg-[#00a884] hover:bg-[#008f6f] text-[#202c33] font-bold rounded-xl transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                className="w-full bg-emerald-500 hover:bg-emerald-400 text-white dark:text-slate-900 font-black text-lg py-4 rounded-xl border-2 border-transparent dark:border-emerald-600 shadow-[4px_4px_0_0_rgba(16,185,129,0.5)] dark:shadow-[4px_4px_0_0_rgba(4,120,87,1)] transition-all hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0_0_rgba(16,185,129,0.5)] dark:hover:shadow-[2px_2px_0_0_rgba(4,120,87,1)] active:shadow-none active:translate-y-[4px] active:translate-x-[4px] flex justify-center items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 {loading ? (
                   <Loader2 className="w-6 h-6 animate-spin" />
                 ) : promptMode === "create" ? (
-                  "Create Backup & Continue"
+                  "Enable Encryption"
                 ) : (
-                  "Restore Keys & Continue"
+                  "Unlock Conversations"
                 )}
               </button>
             </form>
