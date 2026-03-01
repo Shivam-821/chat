@@ -1,9 +1,9 @@
-import { app } from "./app.js";
+import { app } from "./app";
 import http from "http";
 import dotenv from "dotenv";
-import connectDB from "./db/db.js";
-import { connectToRedis } from "./config/redis.js";
-import { connectSocket } from "./config/socket.js";
+import connectDB from "./db/db";
+import { connectToRedis } from "./config/redis";
+import { connectSocket } from "./config/socket";
 
 dotenv.config();
 
