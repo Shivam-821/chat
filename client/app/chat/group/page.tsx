@@ -175,7 +175,7 @@ const GroupPage = () => {
       {/* Bottom encryption notice */}
       <div className="flex-1 flex items-end pb-4 min-h-16">
         <p className="flex items-center gap-2 text-sm text-slate-400 dark:text-slate-500 font-bold">
-          <FaShieldAlt size={14} /> Securely encrypted for groups
+          <FaShieldAlt size={14} /> Securely encrypted for groups in progress
         </p>
       </div>
     </div>

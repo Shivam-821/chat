@@ -34,6 +34,9 @@ const IndividualChatPage = ({ params }: PageProps) => {
   const [contactPublicKey, setContactPublicKey] = useState<any>(null);
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [inputMessage, setInputMessage] = useState("");
+  const [typingUser, setTypingUser] = useState<string | null>(null);
+  const typingTimer = React.useRef<NodeJS.Timeout | null>(null);
+  const lastTypingTime = React.useRef(0);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -166,18 +169,30 @@ const IndividualChatPage = ({ params }: PageProps) => {
       );
     };
 
+    const typingHandler = (data: { senderId: string }) => {
+      if (data.senderId === contact?._id) {
+        setTypingUser(data.senderId);
+        if (typingTimer.current) clearTimeout(typingTimer.current);
+        typingTimer.current = setTimeout(() => {
+          setTypingUser(null);
+        }, 3000);
+      }
+    };
+
     socket.on("receive-message", handler);
     socket.on("message-edited", editHandler);
     socket.on("message-deleted", deleteHandler);
     socket.on("message-sent-success", successHandler);
+    socket.on("typing", typingHandler);
 
     return () => {
       socket.off("receive-message", handler);
       socket.off("message-edited", editHandler);
       socket.off("message-deleted", deleteHandler);
       socket.off("message-sent-success", successHandler);
+      socket.off("typing", typingHandler);
     };
-  }, [socket, decryptPayload]);
+  }, [socket, decryptPayload, contact?._id]);
 
   // Load older messages
   const handleLoadMore = useCallback(async () => {
@@ -319,7 +334,7 @@ const IndividualChatPage = ({ params }: PageProps) => {
       {/* Chat Header */}
       <div className="shrink-0 flex items-center justify-between px-6 py-3 border-b border-lime-200 dark:border-neutral-800 bg-[#e2fbb3] dark:bg-[#1c1c1c] shadow-sm z-10 w-full">
         <div className="flex items-center gap-4">
-          <div className="relative w-12 h-12 rounded-full overflow-hidden bg-lime-300 dark:bg-neutral-700 border-2 border-lime-400 dark:border-neutral-600 flex items-center justify-center text-xl font-black text-lime-800 dark:text-neutral-200 shrink-0">
+          <div className="w-12 h-12 rounded-full overflow-hidden bg-lime-300 dark:bg-neutral-700 border-2 border-lime-400 dark:border-neutral-600 flex items-center justify-center text-xl font-black text-lime-800 dark:text-neutral-200 shrink-0">
             {contact?.avatar ? (
               <img
                 src={contact.avatar}
@@ -332,7 +347,7 @@ const IndividualChatPage = ({ params }: PageProps) => {
               </span>
             )}
             <span
-              className={`absolute bottom-0 right-0 w-3 h-3 border-2 border-[#e2fbb3] dark:border-[#1c1c1c] rounded-full ${contact?.isOnline ? "bg-emerald-500" : "bg-slate-400"}`}
+              className={`absolute top-11 left-15 w-3 h-3 border-2 border-[#e2fbb3] dark:border-[#1c1c1c] rounded-full ${contact?.isOnline ? "bg-emerald-500" : "bg-slate-400"}`}
             />
           </div>
           <div>
@@ -340,9 +355,13 @@ const IndividualChatPage = ({ params }: PageProps) => {
               {contact?.name || decodedUsername}
             </h2>
             <p
-              className={`text-sm font-medium tracking-wide ${contact?.isOnline ? "text-green-600 dark:text-green-400" : "text-slate-400"}`}
+              className={`text-sm font-medium tracking-wide ${typingUser ? "text-amber-500 animate-pulse" : contact?.isOnline ? "text-green-600 dark:text-green-400" : "text-slate-400"}`}
             >
-              {contact?.isOnline ? "Online" : "Offline"}
+              {typingUser
+                ? "Typing..."
+                : contact?.isOnline
+                  ? "Online"
+                  : "Offline"}
             </p>
           </div>
         </div>
@@ -405,7 +424,18 @@ const IndividualChatPage = ({ params }: PageProps) => {
           <input
             type="text"
             value={inputMessage}
-            onChange={(e) => setInputMessage(e.target.value)}
+            onChange={(e) => {
+              setInputMessage(e.target.value);
+              if (!socket || !user?._id || !contact?._id) return;
+              const now = Date.now();
+              if (now - lastTypingTime.current > 2000) {
+                socket.emit("typing", {
+                  senderId: user._id,
+                  receiverId: contact._id,
+                });
+                lastTypingTime.current = now;
+              }
+            }}
             onKeyDown={handleKeyDown}
             placeholder="Type your message here..."
             className="flex-1 bg-transparent border-none outline-none py-2 text-slate-700 dark:text-slate-200 placeholder:text-slate-400"

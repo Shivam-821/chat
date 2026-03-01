@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useAuth } from "@/context/AuthContext";
+import { useSocket } from "@/context/SocketContext";
 import { getContactsApi, createGroupApi, getMyGroupsApi } from "@/api/api";
 import { FaUserFriends, FaPlus, FaTimes } from "react-icons/fa";
 import { useRouter, usePathname } from "next/navigation";
@@ -10,7 +11,8 @@ import { useMobileLayout } from "@/context/MobileLayoutContext";
 import toast from "react-hot-toast";
 
 const SideBar = () => {
-  const { token, isAuthenticated } = useAuth();
+  const { token, isAuthenticated, user } = useAuth();
+  const socket = useSocket();
   const { setShowRightSide } = useMobileLayout();
   const [contacts, setContacts] = useState<any[]>([]);
   const [groups, setGroups] = useState<any[]>([]);
@@ -23,6 +25,9 @@ const SideBar = () => {
   const [groupName, setGroupName] = useState("");
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [isCreating, setIsCreating] = useState(false);
+  const [typingStatus, setTypingStatus] = useState<
+    Record<string, { timeoutId: NodeJS.Timeout; userName?: string }>
+  >({});
 
   const handleCreateGroup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,6 +80,58 @@ const SideBar = () => {
 
     fetchData();
   }, [token, isAuthenticated, isGroupRoute]);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleTyping = (data: { senderId: string }) => {
+      setTypingStatus((prev) => {
+        const id = data.senderId;
+        if (prev[id]?.timeoutId) clearTimeout(prev[id].timeoutId);
+
+        const timeoutId = setTimeout(() => {
+          setTypingStatus((curr) => {
+            const next = { ...curr };
+            delete next[id];
+            return next;
+          });
+        }, 3000);
+
+        return { ...prev, [id]: { timeoutId } };
+      });
+    };
+
+    const handleGroupTyping = (data: {
+      senderId: string;
+      senderName: string;
+      groupId: string;
+    }) => {
+      if (data.senderId === user?._id) return;
+
+      setTypingStatus((prev) => {
+        const id = data.groupId;
+        if (prev[id]?.timeoutId) clearTimeout(prev[id].timeoutId);
+
+        const timeoutId = setTimeout(() => {
+          setTypingStatus((curr) => {
+            const next = { ...curr };
+            delete next[id];
+            return next;
+          });
+        }, 3000);
+
+        return { ...prev, [id]: { timeoutId, userName: data.senderName } };
+      });
+    };
+
+    socket.on("typing", handleTyping);
+    socket.on("group-typing", handleGroupTyping);
+
+    return () => {
+      socket.off("typing", handleTyping);
+      socket.off("group-typing", handleGroupTyping);
+    };
+  }, [socket, user?._id]);
 
   if (loading) {
     return (
@@ -138,7 +195,13 @@ const SideBar = () => {
                   {group.name}
                 </p>
                 <p className="text-xs font-medium text-slate-500 truncate">
-                  {group.members?.length || 0} members
+                  {typingStatus[group._id] ? (
+                    <span className="text-amber-500 font-bold animate-pulse">
+                      {typingStatus[group._id].userName} is typing...
+                    </span>
+                  ) : (
+                    `${group.members?.length || 0} members`
+                  )}
                 </p>
               </div>
             </div>
@@ -192,7 +255,13 @@ const SideBar = () => {
                 {contact.name}
               </p>
               <p className="text-xs font-medium text-slate-500 truncate">
-                @{contact.username}
+                {typingStatus[contact._id] ? (
+                  <span className="text-amber-500 font-bold animate-pulse">
+                    Typing...
+                  </span>
+                ) : (
+                  `@${contact.username}`
+                )}
               </p>
             </div>
           </div>

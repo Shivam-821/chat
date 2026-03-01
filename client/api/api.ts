@@ -104,6 +104,23 @@ export const registerApi = async (
   }
 };
 
+export const logoutApi = async (token: string) => {
+  try {
+    console.log(token);
+    const res = await axios.get(`${API_URL}/auth/logout`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    console.log(res.data);
+    toast.success("Signed out successfully!");
+    return res.data;
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || "Logout failed");
+    return null;
+  }
+};
+
 export const addContactApi = async (identifier: string, token: string) => {
   try {
     const res = await axios.post(

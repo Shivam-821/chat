@@ -5,12 +5,21 @@ import ThemeButton from "./ThemeButton";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useNotifications } from "@/context/NotificationContext";
-
+import { logoutApi } from "@/api/api";
 const NavBar = () => {
   const [openModal, setOpenModal] = useState(false);
   const router = useRouter();
-  const { isAuthenticated, logout, user } = useAuth();
+  const { isAuthenticated, logout, user, token } = useAuth();
   const { unreadCount } = useNotifications();
+
+  const handleLogout = async () => {
+    if (!token) return;
+    const res = await logoutApi(token);
+    if (res.statusCode === 200) {
+      logout();
+    }
+    router.push("/");
+  };
   return (
     <div className="h-16 bg-lime-100 dark:bg-neutral-900 flex justify-between items-center px-5 sticky top-0 z-50">
       <div>
@@ -123,7 +132,7 @@ const NavBar = () => {
 
             {isAuthenticated ? (
               <div
-                onClick={logout}
+                onClick={handleLogout}
                 className="cursor-pointer hover:scale-105 text-rose-600 dark:text-rose-400 font-semibold mt-1 pt-2 border-t border-lime-300 dark:border-neutral-700"
               >
                 Sign Out

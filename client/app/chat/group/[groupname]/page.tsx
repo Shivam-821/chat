@@ -40,6 +40,9 @@ const GroupChatPage = ({ params }: PageProps) => {
   const [group, setGroup] = useState<any>(null);
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [inputMessage, setInputMessage] = useState("");
+  const [typingUser, setTypingUser] = useState<string | null>(null);
+  const typingTimer = React.useRef<NodeJS.Timeout | null>(null);
+  const lastTypingTime = React.useRef(0);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -126,18 +129,34 @@ const GroupChatPage = ({ params }: PageProps) => {
       );
     };
 
+    const typingHandler = (data: {
+      senderId: string;
+      senderName: string;
+      groupId: string;
+    }) => {
+      if (data.groupId === group?._id && data.senderId !== user?._id) {
+        setTypingUser(data.senderName);
+        if (typingTimer.current) clearTimeout(typingTimer.current);
+        typingTimer.current = setTimeout(() => {
+          setTypingUser(null);
+        }, 3000);
+      }
+    };
+
     socket.on("receive-group-message", handler);
     socket.on("message-edited", editHandler);
     socket.on("message-deleted", deleteHandler);
     socket.on("message-sent-success", successHandler);
+    socket.on("group-typing", typingHandler);
 
     return () => {
       socket.off("receive-group-message", handler);
       socket.off("message-edited", editHandler);
       socket.off("message-deleted", deleteHandler);
       socket.off("message-sent-success", successHandler);
+      socket.off("group-typing", typingHandler);
     };
-  }, [socket]);
+  }, [socket, group?._id, user?._id]);
 
   const handleLoadMore = useCallback(async () => {
     if (!group?._id || !token || loadingMore) return;
@@ -252,8 +271,12 @@ const GroupChatPage = ({ params }: PageProps) => {
             <h2 className="text-xl font-bold text-slate-800 dark:text-slate-200">
               {decodedGroupname}
             </h2>
-            <p className="text-sm text-amber-600 dark:text-amber-400 font-medium tracking-wide">
-              {group?.members?.length ?? 0} Members
+            <p
+              className={`text-sm font-medium tracking-wide ${typingUser ? "text-amber-500 animate-pulse" : "text-amber-600 dark:text-amber-400"}`}
+            >
+              {typingUser
+                ? `${typingUser} is typing...`
+                : `${group?.members?.length ?? 0} Members`}
             </p>
           </div>
         </div>
@@ -318,7 +341,19 @@ const GroupChatPage = ({ params }: PageProps) => {
           <input
             type="text"
             value={inputMessage}
-            onChange={(e) => setInputMessage(e.target.value)}
+            onChange={(e) => {
+              setInputMessage(e.target.value);
+              if (!socket || !user?._id || !group?._id) return;
+              const now = Date.now();
+              if (now - lastTypingTime.current > 2000) {
+                socket.emit("group-typing", {
+                  senderId: user._id,
+                  senderName: user.name,
+                  groupId: group._id,
+                });
+                lastTypingTime.current = now;
+              }
+            }}
             onKeyDown={handleKeyDown}
             placeholder="Type a message to the group..."
             className="flex-1 bg-transparent border-none outline-none py-2 text-slate-700 dark:text-slate-200 placeholder:text-slate-400"
