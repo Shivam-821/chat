@@ -14,7 +14,7 @@ const groupCache = new Map<string, string[]>();
 
 export const initSocketListeners = (io: Server) => {
   io.on("connection", async (socket) => {
-    console.log(`Connected: ${socket.id}`);
+    // console.log(`Connected: ${socket.id}`);
 
     try {
       const token = socket.handshake.auth.token;
@@ -33,7 +33,7 @@ export const initSocketListeners = (io: Server) => {
       // PERSONAL ROOM
       socket.join(userId);
 
-      console.log(`${userId} joined personal room`);
+      // console.log(`${userId} joined personal room`);
 
       // ONLINE TRACKING (REDIS)
       const count = await getRedisClient().incr(`online:${userId}`);
@@ -41,10 +41,10 @@ export const initSocketListeners = (io: Server) => {
       if (count === 1) {
         await updateOnlineStatus(userId, true);
 
-        console.log(`${userId} is online`);
+        // console.log(`${userId} is online`);
       }
     } catch (err) {
-      console.log("Auth failed");
+      // console.log("Auth failed");
 
       socket.disconnect();
 
@@ -57,14 +57,14 @@ export const initSocketListeners = (io: Server) => {
 
       socket.join(roomId);
 
-      console.log(`Joined ${roomId}`);
+      // console.log(`Joined ${roomId}`);
     });
 
     // GROUP ROOM
     socket.on("join-group-room", (data: { groupId: string }) => {
       socket.join(data.groupId);
 
-      console.log(`Joined group ${data.groupId}`);
+      // console.log(`Joined group ${data.groupId}`);
     });
 
     // TYPING INDICATOR (INDIVIDUAL)
@@ -257,7 +257,7 @@ export const initSocketListeners = (io: Server) => {
 
     // DISCONNECT
     socket.on("disconnect", async () => {
-      console.log(`Disconnected: ${socket.id}`);
+      // console.log(`Disconnected: ${socket.id}`);
 
       const userId = (socket as any).userId;
 
@@ -271,7 +271,7 @@ export const initSocketListeners = (io: Server) => {
 
         await updateOnlineStatus(userId, false);
 
-        console.log(`${userId} offline`);
+        // console.log(`${userId} offline`);
       }
     });
   });
