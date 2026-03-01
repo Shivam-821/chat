@@ -121,6 +121,18 @@ export const logoutApi = async (token: string) => {
   }
 };
 
+export const checkUsernameApi = async (username: string) => {
+  try {
+    const res = await axios.get(`${API_URL}/auth/check-username`, {
+      params: { username },
+    });
+    return res.data.data;
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || "Failed to check username");
+    return null;
+  }
+};
+
 export const addContactApi = async (identifier: string, token: string) => {
   try {
     const res = await axios.post(

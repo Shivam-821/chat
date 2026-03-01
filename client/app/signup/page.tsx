@@ -1,11 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { registerApi } from "@/api/api";
 import { FaUserPlus, FaEnvelope, FaLock, FaUser } from "react-icons/fa";
 import Link from "next/link";
+import { checkUsernameApi } from "@/api/api";
+import { useDebounce } from "@/hook/useDebounce";
 
 const SignUpPage = () => {
   const [name, setName] = useState("");
@@ -14,6 +16,7 @@ const SignUpPage = () => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isUsernameAvailable, setIsUsernameAvailable] = useState(true);
 
   const { login } = useAuth();
   const router = useRouter();
@@ -33,6 +36,20 @@ const SignUpPage = () => {
     }
     setIsLoading(false);
   };
+
+  const debouncedUsername = useDebounce(username, 500);
+
+  useEffect(() => {
+    const checkUsername = async () => {
+      const response = await checkUsernameApi(debouncedUsername);
+      if (response) {
+        setIsUsernameAvailable(false);
+      } else {
+        setIsUsernameAvailable(true);
+      }
+    };
+    checkUsername();
+  }, [debouncedUsername]);
 
   return (
     <div className="flex flex-col min-h-[calc(100vh-64px)] w-full items-center justify-center py-10 px-6 bg-[#f8fafc] dark:bg-neutral-950 relative overflow-hidden">
@@ -88,11 +105,14 @@ const SignUpPage = () => {
               <input
                 type="text"
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                onChange={(e) => {
+                  setUsername(e.target.value);
+                }}
                 required
                 placeholder="alexdev_"
                 className="w-full bg-slate-50 dark:bg-neutral-900 border-2 border-slate-300 dark:border-neutral-600 focus:border-amber-400 dark:focus:border-amber-500 text-slate-800 dark:text-slate-200 rounded-xl pl-11 pr-4 py-3 focus:outline-none transition-colors font-medium shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
               />
+              <p className="text-red-500">{isUsernameAvailable ? "Username available" : "Username already taken"}</p>
             </div>
           </div>
 
