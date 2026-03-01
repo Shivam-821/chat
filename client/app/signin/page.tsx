@@ -70,7 +70,7 @@ const SignInPage = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                placeholder="alex@example.com"
+                placeholder="imaginaryguy@example.com"
                 className="w-full bg-slate-50 dark:bg-neutral-900 border-2 border-slate-300 dark:border-neutral-600 focus:border-amber-400 dark:focus:border-amber-500 text-slate-800 dark:text-slate-200 rounded-xl pl-11 pr-4 py-3 focus:outline-none transition-colors font-medium shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
               />
             </div>

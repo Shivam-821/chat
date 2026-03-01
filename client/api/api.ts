@@ -126,10 +126,12 @@ export const checkUsernameApi = async (username: string) => {
     const res = await axios.get(`${API_URL}/auth/check-username`, {
       params: { username },
     });
-    return res.data.data;
+    return true; // Available
   } catch (error: any) {
-    toast.error(error.response?.data?.message || "Failed to check username");
-    return null;
+    if (error.response?.status !== 409) {
+      toast.error(error.response?.data?.message || "Failed to check username");
+    }
+    return false; // Taken or error
   }
 };
 

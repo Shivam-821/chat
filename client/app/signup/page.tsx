@@ -41,12 +41,12 @@ const SignUpPage = () => {
 
   useEffect(() => {
     const checkUsername = async () => {
-      const response = await checkUsernameApi(debouncedUsername);
-      if (response) {
-        setIsUsernameAvailable(false);
-      } else {
+      if (!debouncedUsername) {
         setIsUsernameAvailable(true);
+        return;
       }
+      const isAvailable = await checkUsernameApi(debouncedUsername);
+      setIsUsernameAvailable(isAvailable);
     };
     checkUsername();
   }, [debouncedUsername]);
@@ -88,7 +88,7 @@ const SignUpPage = () => {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
-                placeholder="Alex Developer"
+                placeholder="imaginary guy"
                 className="w-full bg-slate-50 dark:bg-neutral-900 border-2 border-slate-300 dark:border-neutral-600 focus:border-amber-400 dark:focus:border-amber-500 text-slate-800 dark:text-slate-200 rounded-xl pl-11 pr-4 py-3 focus:outline-none transition-colors font-medium shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
               />
             </div>
@@ -109,10 +109,18 @@ const SignUpPage = () => {
                   setUsername(e.target.value);
                 }}
                 required
-                placeholder="alexdev_"
+                placeholder="imaginary_guy"
                 className="w-full bg-slate-50 dark:bg-neutral-900 border-2 border-slate-300 dark:border-neutral-600 focus:border-amber-400 dark:focus:border-amber-500 text-slate-800 dark:text-slate-200 rounded-xl pl-11 pr-4 py-3 focus:outline-none transition-colors font-medium shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
               />
-              <p className="text-red-500">{isUsernameAvailable ? "Username available" : "Username already taken"}</p>
+              <p
+                className={`${username ? (isUsernameAvailable ? "text-green-500" : "text-red-500") : "hidden"}`}
+              >
+                {username
+                  ? isUsernameAvailable
+                    ? "Username available"
+                    : "Username already taken"
+                  : ""}
+              </p>
             </div>
           </div>
 
@@ -129,7 +137,7 @@ const SignUpPage = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                placeholder="alex@example.com"
+                placeholder="imaginaryguy@example.com"
                 className="w-full bg-slate-50 dark:bg-neutral-900 border-2 border-slate-300 dark:border-neutral-600 focus:border-amber-400 dark:focus:border-amber-500 text-slate-800 dark:text-slate-200 rounded-xl pl-11 pr-4 py-3 focus:outline-none transition-colors font-medium shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
               />
             </div>
