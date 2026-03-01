@@ -2,7 +2,7 @@ import axios from "axios";
 import toast from "react-hot-toast";
 
 // Base URL for the backend API
-const API_URL = "http://localhost:3001/api/v1";
+const API_URL = "https://chat-h62w.onrender.com/api/v1";
 
 export interface User {
   _id: string;
