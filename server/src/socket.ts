@@ -3,6 +3,10 @@ import jwt from "jsonwebtoken";
 import { getRedisClient } from "./config/redis";
 import { updateOnlineStatus } from "./controllers/user.controller";
 import { GroupModel } from "./models/group.model";
+import {
+  saveIndividualMessage,
+  saveGroupMessage,
+} from "./controllers/message.controller";
 
 // Cache group members
 const groupCache = new Map<string, string[]>();
@@ -65,7 +69,7 @@ export const initSocketListeners = (io: Server) => {
     // PRIVATE MESSAGE
     socket.on(
       "send-message",
-      (data: {
+      async (data: {
         senderId: string;
         receiverId: string;
         message: string;
@@ -74,8 +78,14 @@ export const initSocketListeners = (io: Server) => {
         const roomId = [data.senderId, data.receiverId].sort().join("_");
 
         socket.to(roomId).emit("receive-message", data);
-
         io.to(data.receiverId).emit("receive-notification", data);
+
+        // Persist to DB (non-blocking)
+        saveIndividualMessage(
+          data.senderId,
+          data.receiverId,
+          data.message,
+        ).catch((err) => console.error("[saveIndividualMessage]:", err));
       },
     );
 
@@ -97,11 +107,8 @@ export const initSocketListeners = (io: Server) => {
           const group = await GroupModel.findById(data.groupId).select(
             "members",
           );
-
           if (!group) return;
-
           members = group.members.map((m: any) => m.toString());
-
           groupCache.set(data.groupId, members);
         }
 
@@ -114,6 +121,11 @@ export const initSocketListeners = (io: Server) => {
             });
           }
         });
+
+        // Persist to DB (non-blocking)
+        saveGroupMessage(data.senderId, data.groupId, data.message).catch(
+          (err) => console.error("[saveGroupMessage]:", err),
+        );
       },
     );
 
