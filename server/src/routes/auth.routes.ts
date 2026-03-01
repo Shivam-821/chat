@@ -5,6 +5,7 @@ import {
   verifyToken,
   updateProfile,
   logoutUser,
+  checkUsername,
 } from "../controllers/auth.controller";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { upload } from "../middlewares/multer.middleware";
@@ -21,5 +22,6 @@ router.patch(
   updateProfile,
 );
 router.get("/logout", authMiddleware, logoutUser);
+router.get("/check-username", checkUsername);
 
 export default router;

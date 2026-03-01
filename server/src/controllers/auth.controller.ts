@@ -213,3 +213,17 @@ export const updateProfile = asyncHandler(
     );
   },
 );
+
+export const checkUsername = asyncHandler(
+  async (req: Request, res: Response) => {
+    const username = req.query.username as string;
+    if (!username)
+      return res.status(400).json(new ApiError(400, "Username is required"));
+
+    const user = await UserModel.findOne({ username });
+    if (user)
+      return res.status(409).json(new ApiError(409, "Username already exists"));
+
+    return res.status(200).json(new ApiResponse(200, {}, "Username available"));
+  },
+);
