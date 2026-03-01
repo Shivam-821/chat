@@ -12,7 +12,7 @@ interface AuthRequest extends Request {
 export const getTasks = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     if (!req.user || !req.user._id) {
-      throw new ApiError(401, "Unauthorized request");
+      return res.status(401).json(new ApiError(401, "Unauthorized request"));
     }
 
     const tasks = await Task.find({ user: req.user._id }).sort({
@@ -31,7 +31,7 @@ export const createTask = asyncHandler(
       req.body;
 
     if (!title || !date) {
-      throw new ApiError(400, "Title and date are required");
+      return res.status(400).json(new ApiError(400, "Title and date are required"));
     }
 
     const task = await Task.create({
@@ -66,7 +66,7 @@ export const updateTask = asyncHandler(
     const task = await Task.findOne({ _id: id, user: req.user._id });
 
     if (!task) {
-      throw new ApiError(404, "Task not found");
+      return res.status(404).json(new ApiError(404, "Task not found"));
     }
 
     const updatedTask = await Task.findByIdAndUpdate(
@@ -92,7 +92,7 @@ export const deleteTask = asyncHandler(
     const task = await Task.findOne({ _id: id, user: req.user._id });
 
     if (!task) {
-      throw new ApiError(404, "Task not found");
+      return res.status(404).json(new ApiError(404, "Task not found"));
     }
 
     await Task.findByIdAndDelete(id);

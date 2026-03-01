@@ -64,14 +64,11 @@ export const saveGroupMessage = async (
   return saved;
 };
 
-// ─────────────────────────────────────────────
-//  HTTP: GET /messages/individual/:chatId
-//  Query: ?page=1 (default 1)
-// ─────────────────────────────────────────────
+
 export const getIndividualMessages = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const user = req.user;
-    if (!user) throw new ApiError(401, "Unauthorized");
+    if (!user) return res.status(401).json(new ApiError(401, "Unauthorized"));
 
     const { user1Id, user2Id } = req.params;
     const page = Math.max(1, parseInt(req.query.page as string) || 1);
@@ -122,14 +119,11 @@ export const getIndividualMessages = asyncHandler(
   },
 );
 
-// ─────────────────────────────────────────────
-//  HTTP: GET /messages/group/:groupId
-//  Query: ?page=1 (default 1)
-// ─────────────────────────────────────────────
+
 export const getGroupMessages = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const user = req.user;
-    if (!user) throw new ApiError(401, "Unauthorized");
+    if (!user) return res.status(401).json(new ApiError(401, "Unauthorized"));
 
     const { groupId } = req.params;
     const page = Math.max(1, parseInt(req.query.page as string) || 1);

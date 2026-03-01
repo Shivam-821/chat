@@ -12,7 +12,7 @@ export const deleteNotification = asyncHandler(
     const user = req.user;
 
     if (!user || !user._id) {
-      throw new ApiError(401, "Unauthorized request");
+      return res.status(401).json(new ApiError(401, "Unauthorized request"));
     }
 
     try {
@@ -37,7 +37,7 @@ export const getAllNotifications = asyncHandler(
     const user = req.user;
 
     if (!user || !user._id) {
-      throw new ApiError(401, "Unauthorized request");
+      return res.status(401).json(new ApiError(401, "Unauthorized request"));
     }
 
     try {
@@ -66,7 +66,7 @@ export const getUnreadNotificationsCount = asyncHandler(
     const user = req.user;
 
     if (!user || !user._id) {
-      throw new ApiError(401, "Unauthorized request");
+      return res.status(401).json(new ApiError(401, "Unauthorized request"));
     }
 
     try {
@@ -97,7 +97,7 @@ export const markNotificationAsRead = asyncHandler(
     const user = req.user;
 
     if (!user || !user._id) {
-      throw new ApiError(401, "Unauthorized request");
+      return res.status(401).json(new ApiError(401, "Unauthorized request"));
     }
 
     try {
@@ -128,7 +128,7 @@ export const sendAlertOfTaskPending = asyncHandler(
     const user = req.user;
 
     if (!user || !user._id) {
-      throw new ApiError(401, "Unauthorized request");
+      return res.status(401).json(new ApiError(401, "Unauthorized request"));
     }
 
     try {

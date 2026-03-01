@@ -11,7 +11,7 @@ export const getAdminGroups = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const user = req.user;
     if (!user) {
-      throw new ApiError(401, "Unauthorized");
+      return res.status(401).json(new ApiError(401, "Unauthorized"));
     }
 
     const groups = await GroupModel.find({ admin: user._id })
@@ -30,7 +30,7 @@ export const createGroup = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const user = req.user;
     if (!user) {
-      throw new ApiError(401, "Unauthorized");
+      return res.status(401).json(new ApiError(401, "Unauthorized"));
     }
 
     const { name, members = [] } = req.body;
@@ -71,7 +71,7 @@ export const getGroupById = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const user = req.user;
     if (!user) {
-      throw new ApiError(401, "Unauthorized");
+      return res.status(401).json(new ApiError(401, "Unauthorized"));
     }
 
     const { id } = req.params;
@@ -82,7 +82,7 @@ export const getGroupById = asyncHandler(
     );
 
     if (!group) {
-      throw new ApiError(404, "Group not found");
+      return res.status(404).json(new ApiError(404, "Group not found"));
     }
 
     // Verify member access
@@ -91,7 +91,7 @@ export const getGroupById = asyncHandler(
     );
 
     if (!isMember) {
-      throw new ApiError(403, "You are not a member of this group");
+      return res.status(403).json(new ApiError(403, "You are not a member of this group"));
     }
 
     return res
@@ -104,7 +104,7 @@ export const getGroupByName = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const user = req.user;
     if (!user) {
-      throw new ApiError(401, "Unauthorized");
+      return res.status(401).json(new ApiError(401, "Unauthorized"));
     }
 
     const { name } = req.params;
@@ -114,7 +114,7 @@ export const getGroupByName = asyncHandler(
     }).populate("members", "name username avatar");
 
     if (!group) {
-      throw new ApiError(404, "Group not found");
+      return res.status(404).json(new ApiError(404, "Group not found"));
     }
 
     // Verify member access
@@ -123,7 +123,7 @@ export const getGroupByName = asyncHandler(
     );
 
     if (!isMember) {
-      throw new ApiError(403, "You are not a member of this group");
+      return res.status(403).json(new ApiError(403, "You are not a member of this group"));
     }
 
     return res
@@ -136,7 +136,7 @@ export const getMyGroups = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const user = req.user;
     if (!user) {
-      throw new ApiError(401, "Unauthorized");
+      return res.status(401).json(new ApiError(401, "Unauthorized"));
     }
 
     const groups = await GroupModel.find({ members: user._id })
@@ -153,21 +153,21 @@ export const leaveGroup = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const user = req.user;
     if (!user) {
-      throw new ApiError(401, "Unauthorized");
+      return res.status(401).json(new ApiError(401, "Unauthorized"));
     }
 
     const { id } = req.params;
 
     const group = await GroupModel.findById(id);
     if (!group) {
-      throw new ApiError(404, "Group not found");
+      return res.status(404).json(new ApiError(404, "Group not found"));
     }
 
     if (group.admin.toString() === user._id.toString()) {
-      throw new ApiError(
+      return res.status(400).json(new ApiError(
         400,
         "Admin cannot leave the group. You must delete the group or transfer ownership.",
-      );
+      ));
     }
 
     const isMember = group.members.some(
@@ -175,7 +175,7 @@ export const leaveGroup = asyncHandler(
     );
 
     if (!isMember) {
-      throw new ApiError(400, "You are not a member of this group");
+      return res.status(400).json(new ApiError(400, "You are not a member of this group"));
     }
 
     group.members = group.members.filter(
@@ -194,18 +194,18 @@ export const deleteGroup = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const user = req.user;
     if (!user) {
-      throw new ApiError(401, "Unauthorized");
+      return res.status(401).json(new ApiError(401, "Unauthorized"));
     }
 
     const { id } = req.params;
 
     const group = await GroupModel.findById(id);
     if (!group) {
-      throw new ApiError(404, "Group not found");
+      return res.status(404).json(new ApiError(404, "Group not found"));
     }
 
     if (group.admin.toString() !== user._id.toString()) {
-      throw new ApiError(403, "Only the group admin can delete the group");
+      return res.status(403).json(new ApiError(403, "Only the group admin can delete the group"));
     }
 
     await GroupModel.findByIdAndDelete(id);
@@ -220,7 +220,7 @@ export const searchGroups = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const user = req.user;
     if (!user) {
-      throw new ApiError(401, "Unauthorized");
+      return res.status(401).json(new ApiError(401, "Unauthorized"));
     }
 
     const searchQuery = req.query.q as string;
@@ -250,23 +250,23 @@ export const addMembers = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const user = req.user;
     if (!user) {
-      throw new ApiError(401, "Unauthorized");
+      return res.status(401).json(new ApiError(401, "Unauthorized"));
     }
 
     const { id } = req.params;
     const { memberIds } = req.body as { memberIds: string[] };
 
     if (!memberIds || !Array.isArray(memberIds) || memberIds.length === 0) {
-      throw new ApiError(400, "memberIds array is required");
+      return res.status(400).json(new ApiError(400, "memberIds array is required"));
     }
 
     const group = await GroupModel.findById(id);
     if (!group) {
-      throw new ApiError(404, "Group not found");
+      return res.status(404).json(new ApiError(404, "Group not found"));
     }
 
     if (group.admin.toString() !== user._id.toString()) {
-      throw new ApiError(403, "Only the group admin can add members");
+      return res.status(403).json(new ApiError(403, "Only the group admin can add members"));
     }
 
     // Filter out IDs already in the group
@@ -276,7 +276,7 @@ export const addMembers = asyncHandler(
     );
 
     if (newMemberIds.length === 0) {
-      throw new ApiError(400, "All selected users are already members");
+        return res.status(400).json(new ApiError(400, "All selected users are already members"));
     }
 
     group.members = [...group.members, ...newMemberIds] as any;
@@ -304,26 +304,26 @@ export const addMembers = asyncHandler(
 export const requestJoinGroup = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const user = req.user;
-    if (!user) throw new ApiError(401, "Unauthorized");
+    if (!user) return res.status(401).json(new ApiError(401, "Unauthorized"));
 
     const { id } = req.params; // group ID
 
     const group = await GroupModel.findById(id);
-    if (!group) throw new ApiError(404, "Group not found");
+    if (!group) return res.status(404).json(new ApiError(404, "Group not found"));
 
     // Can't request to join a group you're already in
     const isMember = group.members.some(
       (m: any) => m.toString() === user._id.toString(),
     );
     if (isMember)
-      throw new ApiError(400, "You are already a member of this group");
+      return res.status(400).json(new ApiError(400, "You are already a member of this group"));
 
     // Prevent duplicate requests
     const existing = await GroupJoinRequestModel.findOne({
       sender: user._id,
       group: id,
     });
-    if (existing) throw new ApiError(400, "Join request already sent");
+    if (existing) return res.status(400).json(new ApiError(400, "Join request already sent"));
 
     const joinRequest = await GroupJoinRequestModel.create({
       sender: user._id,
@@ -350,7 +350,7 @@ export const requestJoinGroup = asyncHandler(
 export const getGroupJoinRequests = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const user = req.user;
-    if (!user) throw new ApiError(401, "Unauthorized");
+    if (!user) return res.status(401).json(new ApiError(401, "Unauthorized"));
 
     // Find all pending join requests for groups where the logged-in user is admin
     const adminGroups = await GroupModel.find({ admin: user._id }).select(
@@ -375,24 +375,24 @@ export const getGroupJoinRequests = asyncHandler(
 export const updateGroupJoinRequest = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const user = req.user;
-    if (!user) throw new ApiError(401, "Unauthorized");
+    if (!user) return res.status(401).json(new ApiError(401, "Unauthorized"));
 
     const { requestId } = req.params;
     const { status } = req.body as { status: "accepted" | "rejected" };
 
     if (!["accepted", "rejected"].includes(status)) {
-      throw new ApiError(400, "Invalid status");
+      return res.status(400).json(new ApiError(400, "Invalid status"));
     }
 
     const joinRequest =
       await GroupJoinRequestModel.findById(requestId).populate("group");
-    if (!joinRequest) throw new ApiError(404, "Request not found");
+    if (!joinRequest) return res.status(404).json(new ApiError(404, "Request not found"));
 
     const group = joinRequest.group as any;
 
     // Only admin can respond
     if (group.admin.toString() !== user._id.toString()) {
-      throw new ApiError(403, "Only the group admin can respond to requests");
+      return res.status(403).json(new ApiError(403, "Only the group admin can respond to requests"));
     }
 
     joinRequest.status = status;

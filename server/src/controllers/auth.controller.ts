@@ -167,13 +167,13 @@ export const logoutUser = asyncHandler(
 export const updateProfile = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const user = req.user;
-    if (!user) throw new ApiError(401, "Unauthorized");
+    if (!user) return res.status(401).json(new ApiError(401, "Unauthorized"));
 
     const { name, about } = req.body;
     const avatarFile = (req as any).file as Express.Multer.File | undefined;
 
     const dbUser = await UserModel.findById(user._id);
-    if (!dbUser) throw new ApiError(404, "User not found");
+    if (!dbUser) return res.status(404).json(new ApiError(404, "User not found"));
 
     // Update text fields if provided
     if (name?.trim()) dbUser.name = name.trim();

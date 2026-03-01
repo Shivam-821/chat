@@ -9,13 +9,13 @@ export const backupKeys = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const user = req.user;
     if (!user) {
-      throw new ApiError(401, "Unauthorized");
+      return res.status(401).json(new ApiError(401, "Unauthorized"));
     }
 
     const { publicKey, encryptedPrivateKey, iv } = req.body;
 
     if (!publicKey || !encryptedPrivateKey || !iv) {
-      throw new ApiError(400, "Missing required key data");
+      return res.status(400).json(new ApiError(400, "Missing required key data"));
     }
 
     let userKeys = await UserKeysModel.findOne({ userId: user._id });
@@ -48,7 +48,7 @@ export const getKeys = asyncHandler(async (req: AuthRequest, res: Response) => {
   const userKeys = await UserKeysModel.findOne({ userId });
 
   if (!userKeys) {
-    throw new ApiError(404, "Keys not found for this user");
+    return res.status(404).json(new ApiError(404, "Keys not found for this user"));
   }
 
   return res.status(200).json(

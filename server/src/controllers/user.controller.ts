@@ -102,7 +102,7 @@ export const getIncomingRequests = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const user = req.user;
     if (!user) {
-      throw new ApiError(401, "Unauthorized");
+      return res.status(401).json(new ApiError(401, "Unauthorized"));
     }
 
     // Find all pending requests where the receiver is the current user
@@ -132,11 +132,13 @@ export const updateRequestStatus = asyncHandler(
     const user = req.user;
 
     if (!user) {
-      throw new ApiError(401, "Unauthorized");
+      return res.status(401).json(new ApiError(401, "Unauthorized"));
     }
 
     if (!["accepted", "rejected"].includes(status)) {
-      throw new ApiError(400, "Invalid status. Must be accepted or rejected.");
+      return res
+        .status(400)
+        .json(new ApiError(400, "Invalid status. Must be accepted or rejected."));
     }
 
     const request = await RequestModel.findOne({
@@ -146,7 +148,7 @@ export const updateRequestStatus = asyncHandler(
     });
 
     if (!request) {
-      throw new ApiError(404, "Pending contact request not found");
+      return res.status(404).json(new ApiError(404, "Pending contact request not found"));
     }
 
     request.status = status;
@@ -206,7 +208,7 @@ export const getContacts = asyncHandler(
     const user = req.user;
 
     if (!user) {
-      throw new ApiError(401, "Unauthorized");
+      return res.status(401).json(new ApiError(401, "Unauthorized"));
     }
 
     // Find all individuals where the current user is either user1 or user2
