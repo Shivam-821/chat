@@ -8,14 +8,16 @@ import {
   type ReactNode,
 } from "react";
 import { User, AuthResponse, verifyTokenApi } from "@/api/api";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
+import { useSocket } from "./SocketContext";
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  onlineStatus: boolean;
   login: (data: AuthResponse["data"]) => void;
   logout: () => void;
   updateUser: (u: User) => void;
@@ -27,8 +29,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [onlineStatus, setOnlineStatus] = useState(false);
   const router = useRouter();
-  const pathname = usePathname();
+  const socket = useSocket();
+
+  // Connect socket with token so server can authenticate via JWT handshake
+  const connectSocket = (jwtToken: string) => {
+    socket.auth = { token: jwtToken };
+    if (!socket.connected) {
+      socket.connect();
+    }
+  };
 
   useEffect(() => {
     const initializeAuth = async () => {
@@ -39,14 +50,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (verifiedUser) {
           setToken(storedToken);
           setUser(verifiedUser);
-          // Persist full user (including avatar/about) back to localStorage
           localStorage.setItem("chat_user", JSON.stringify(verifiedUser));
+          connectSocket(storedToken);
+          setOnlineStatus(true);
         } else {
           localStorage.removeItem("chat_token");
           localStorage.removeItem("chat_user");
           Cookies.remove("chat_token");
           setToken(null);
           setUser(null);
+          setOnlineStatus(false);
         }
       }
       setIsLoading(false);
@@ -61,6 +74,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     Cookies.set("chat_token", data.token, { expires: 7 });
     setToken(data.token);
     setUser(data.user);
+    connectSocket(data.token);
+    setOnlineStatus(true);
   };
 
   const updateUser = (u: User) => {
@@ -74,6 +89,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     Cookies.remove("chat_token");
     setToken(null);
     setUser(null);
+    setOnlineStatus(false);
+    socket.disconnect();
     router.push("/signin");
   };
 
@@ -92,6 +109,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         token,
         isAuthenticated: !!token,
         isLoading,
+        onlineStatus,
         login,
         logout,
         updateUser,

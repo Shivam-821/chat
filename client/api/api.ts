@@ -494,3 +494,81 @@ export const deleteNotificationApi = async (
     return false;
   }
 };
+
+// --- Message API ---
+
+export interface ChatMessage {
+  _id: string;
+  sender: { _id: string; name: string; avatar?: string };
+  message: string;
+  chatType: "IndividualMessage" | "Group";
+  createdAt: string;
+}
+
+export const getIndividualMessagesApi = async (
+  user1Id: string,
+  user2Id: string,
+  page: number,
+  token: string,
+): Promise<{ messages: ChatMessage[]; hasMore: boolean } | null> => {
+  try {
+    const res = await axios.get(
+      `${API_URL}/messages/individual/${user1Id}/${user2Id}?page=${page}`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+    return res.data.data;
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || "Failed to load messages");
+    return null;
+  }
+};
+
+export const getGroupMessagesApi = async (
+  groupId: string,
+  page: number,
+  token: string,
+): Promise<{ messages: ChatMessage[]; hasMore: boolean } | null> => {
+  try {
+    const res = await axios.get(
+      `${API_URL}/messages/group/${groupId}?page=${page}`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+    return res.data.data;
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || "Failed to load messages");
+    return null;
+  }
+};
+
+// --- Keys API ---
+
+export const backupKeysApi = async (
+  publicKey: any,
+  encryptedPrivateKey: number[],
+  iv: number[],
+  token: string,
+) => {
+  try {
+    const res = await axios.post(
+      `${API_URL}/keys/backup`,
+      { publicKey, encryptedPrivateKey, iv },
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+    toast.success("Encryption keys backed up securely!");
+    return res.data;
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || "Failed to backup keys");
+    return null;
+  }
+};
+
+export const getKeysApi = async (userId: string, token: string) => {
+  try {
+    const res = await axios.get(`${API_URL}/keys/${userId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return res.data.data;
+  } catch (error: any) {
+    return null;
+  }
+};

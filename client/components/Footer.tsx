@@ -2,10 +2,18 @@
 
 import Link from "next/link";
 import React from "react";
+import { usePathname } from "next/navigation";
 import { FaGithub, FaDiscord } from "react-icons/fa";
 import { FaXTwitter } from "react-icons/fa6";
 
 const Footer = () => {
+  const pathname = usePathname();
+
+  // Hide the footer entirely on chat pages so it doesn't squish the layout on mobile
+  if (pathname.startsWith("/chat")) {
+    return null;
+  }
+
   return (
     <footer className="bg-lime-100 dark:bg-neutral-900 border-t border-lime-200 dark:border-neutral-800 py-8 px-5 mt-auto w-full z-10 relative">
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
