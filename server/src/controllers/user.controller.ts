@@ -232,3 +232,9 @@ export const getContacts = asyncHandler(
       );
   },
 );
+
+// ------------------ Socket Helper Method ------------------
+
+export const updateOnlineStatus = async (userId: string, status: boolean) => {
+  await UserModel.findByIdAndUpdate(userId, { isOnline: status });
+};
