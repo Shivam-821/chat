@@ -135,6 +135,7 @@ export const checkUsernameApi = async (username: string) => {
   }
 };
 
+// contact api
 export const addContactApi = async (identifier: string, token: string) => {
   try {
     const res = await axios.post(
@@ -146,7 +147,9 @@ export const addContactApi = async (identifier: string, token: string) => {
         },
       },
     );
-    toast.success("Contact added successfully!");
+    toast.success(
+      res.data.data.message || "Contact request sent successfully!",
+    );
     return res.data;
   } catch (error: any) {
     toast.error(error.response?.data?.message || "Failed to add contact");
@@ -181,7 +184,7 @@ export const updateRequestStatusApi = async (
         headers: { Authorization: `Bearer ${token}` },
       },
     );
-    toast.success(`Request ${status} successfully!`);
+    toast.success(res.data.message || `Request ${status} successfully!`);
     return true;
   } catch (error: any) {
     toast.error(error.response?.data?.message || `Failed to ${status} request`);

@@ -7,6 +7,7 @@ import { ApiResponse } from "../utils/ApiResponse";
 import type { AuthRequest } from "../middlewares/auth.middleware";
 import { IndividualMessageModel } from "../models/individual.model";
 import { NotificationModel } from "../models/notification.model";
+import { io } from "../config/socket";
 
 export const addContactRequest = asyncHandler(
   async (req: AuthRequest, res: Response) => {
@@ -82,7 +83,7 @@ export const addContactRequest = asyncHandler(
       notificationType: "request",
     });
 
-    req.app.get("io").to(targetUser._id.toString()).emit("received-request", {
+    io.to(targetUser._id.toString()).emit("received-request", {
       request: newRequest,
     });
 
@@ -92,7 +93,7 @@ export const addContactRequest = asyncHandler(
         new ApiResponse(
           201,
           { request: newRequest },
-          "Contact request sent successfully",
+          `Request sent to ${targetUser.username}`,
         ),
       );
   },
@@ -138,7 +139,9 @@ export const updateRequestStatus = asyncHandler(
     if (!["accepted", "rejected"].includes(status)) {
       return res
         .status(400)
-        .json(new ApiError(400, "Invalid status. Must be accepted or rejected."));
+        .json(
+          new ApiError(400, "Invalid status. Must be accepted or rejected."),
+        );
     }
 
     const request = await RequestModel.findOne({
@@ -148,7 +151,9 @@ export const updateRequestStatus = asyncHandler(
     });
 
     if (!request) {
-      return res.status(404).json(new ApiError(404, "Pending contact request not found"));
+      return res
+        .status(404)
+        .json(new ApiError(404, "Pending contact request not found"));
     }
 
     request.status = status;
@@ -183,13 +188,13 @@ export const updateRequestStatus = asyncHandler(
     });
 
     // Notify the original sender in real-time
-    req.app
-      .get("io")
-      .to(request.sender.toString())
-      .emit(status === "accepted" ? "accept-request" : "reject-request", {
+    io.to(request.sender.toString()).emit(
+      status === "accepted" ? "accept-request" : "reject-request",
+      {
         request,
         individualMessage,
-      });
+      },
+    );
 
     return res
       .status(200)

@@ -156,6 +156,9 @@ export const logoutUser = asyncHandler(
     }
 
     user.maxlogin = user.maxlogin - 1;
+    if (user.maxlogin < 0) {
+      user.maxlogin = 0;
+    }
     await user.save();
 
     return res
@@ -173,7 +176,8 @@ export const updateProfile = asyncHandler(
     const avatarFile = (req as any).file as Express.Multer.File | undefined;
 
     const dbUser = await UserModel.findById(user._id);
-    if (!dbUser) return res.status(404).json(new ApiError(404, "User not found"));
+    if (!dbUser)
+      return res.status(404).json(new ApiError(404, "User not found"));
 
     // Update text fields if provided
     if (name?.trim()) dbUser.name = name.trim();

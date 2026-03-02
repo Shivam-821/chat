@@ -65,9 +65,9 @@ export const E2EProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
-      // 2. Check SessionStorage (to survive page reloads but clear on browser close)
-      const cachedPrivate = sessionStorage.getItem("e2e_private_key");
-      const cachedPublic = sessionStorage.getItem("e2e_public_key");
+      // 2. Check localStorage (to survive page reloads but clear on browser close)
+      const cachedPrivate = localStorage.getItem("e2e_private_key");
+      const cachedPublic = localStorage.getItem("e2e_public_key");
 
       if (cachedPrivate && cachedPublic) {
         try {
@@ -77,8 +77,8 @@ export const E2EProvider = ({ children }: { children: ReactNode }) => {
           return;
         } catch (e) {
           console.error("Failed to parse cached keys", e);
-          sessionStorage.removeItem("e2e_private_key");
-          sessionStorage.removeItem("e2e_public_key");
+          localStorage.removeItem("e2e_private_key");
+          localStorage.removeItem("e2e_public_key");
         }
       }
 
@@ -86,7 +86,7 @@ export const E2EProvider = ({ children }: { children: ReactNode }) => {
       const serverKeys = await getKeysApi(user._id, token);
 
       if (serverKeys && serverKeys.encryptedPrivateKey) {
-        // Keys exist on server! Do we have them in memory/session? No.
+        // Keys exist on server! Do we have them in memory/localStorage? No.
         // Prompt for restore
         setServerEncryptedKey(serverKeys);
         setPromptMode("restore");
@@ -123,11 +123,11 @@ export const E2EProvider = ({ children }: { children: ReactNode }) => {
 
         setPrivateKey(keys.privateKey);
         setPublicKey(keys.publicKey);
-        sessionStorage.setItem(
+        localStorage.setItem(
           "e2e_private_key",
           JSON.stringify(keys.privateKey),
         );
-        sessionStorage.setItem(
+        localStorage.setItem(
           "e2e_public_key",
           JSON.stringify(keys.publicKey),
         );
@@ -145,8 +145,8 @@ export const E2EProvider = ({ children }: { children: ReactNode }) => {
 
         setPrivateKey(decryptedKey);
         setPublicKey(serverEncryptedKey.publicKey);
-        sessionStorage.setItem("e2e_private_key", JSON.stringify(decryptedKey));
-        sessionStorage.setItem(
+        localStorage.setItem("e2e_private_key", JSON.stringify(decryptedKey));
+        localStorage.setItem(
           "e2e_public_key",
           JSON.stringify(serverEncryptedKey.publicKey),
         );

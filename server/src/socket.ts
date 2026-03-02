@@ -70,7 +70,12 @@ export const initSocketListeners = (io: Server) => {
     // TYPING INDICATOR (INDIVIDUAL)
     socket.on("typing", (data: { senderId: string; receiverId: string }) => {
       const roomId = [data.senderId, data.receiverId].sort().join("_");
+      // Emit to the specific chat room (if they are in it)
       socket.to(roomId).emit("typing", {
+        senderId: data.senderId,
+      });
+      // Emit to the receiver's personal room (for Sidebar global listening)
+      socket.to(data.receiverId).emit("typing", {
         senderId: data.senderId,
       });
     });

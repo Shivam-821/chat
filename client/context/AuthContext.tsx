@@ -56,7 +56,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         } else {
           localStorage.removeItem("chat_token");
           localStorage.removeItem("chat_user");
-          Cookies.remove("chat_token");
+          Cookies.remove("chat_token", { path: "/" });
           setToken(null);
           setUser(null);
           setOnlineStatus(false);
@@ -71,11 +71,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = (data: AuthResponse["data"]) => {
     localStorage.setItem("chat_token", data.token);
     localStorage.setItem("chat_user", JSON.stringify(data.user));
-    Cookies.set("chat_token", data.token, { expires: 7 });
+    Cookies.set("chat_token", data.token, { expires: 7, path: "/" });
     setToken(data.token);
     setUser(data.user);
     connectSocket(data.token);
     setOnlineStatus(true);
+    router.refresh();
   };
 
   const updateUser = (u: User) => {
@@ -86,12 +87,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = () => {
     localStorage.removeItem("chat_token");
     localStorage.removeItem("chat_user");
-    Cookies.remove("chat_token");
+    Cookies.remove("chat_token", { path: "/" });
     setToken(null);
     setUser(null);
     setOnlineStatus(false);
     socket.disconnect();
     router.push("/signin");
+    router.refresh();
   };
 
   if (isLoading) {
