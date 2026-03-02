@@ -11,6 +11,11 @@ export interface DisplayMessage {
   createdAt?: string;
   edited?: boolean;
   deleted?: boolean;
+  replyTo?: {
+    _id: string;
+    message: string;
+    senderName: string;
+  };
 }
 
 interface ChatMessagesProps {
@@ -27,6 +32,7 @@ interface ChatMessagesProps {
   emptyText?: string;
   onEditMessage?: (msg: DisplayMessage) => void;
   onDeleteMessage?: (msg: DisplayMessage) => void;
+  onReplyMessage?: (msg: DisplayMessage) => void;
 }
 
 const ChatMessages = ({
@@ -41,6 +47,7 @@ const ChatMessages = ({
   emptyText = "No messages yet.",
   onEditMessage,
   onDeleteMessage,
+  onReplyMessage,
 }: ChatMessagesProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -147,29 +154,43 @@ const ChatMessages = ({
                     className="fixed inset-0 z-40"
                     onClick={() => setSelectedMessageId(null)}
                   />
-                  <div className="absolute top-1/2 -translate-y-1/2 right-[105%] mr-2 z-50 flex flex-col gap-1 bg-white dark:bg-neutral-800 shadow-xl border border-slate-200 dark:border-neutral-700 rounded-xl p-1.5 min-w-[140px] animate-in fade-in zoom-in duration-200">
+                  <div
+                    className={`absolute top-1/2 -translate-y-1/2 ${isSelf ? "right-[105%] mr-2" : "left-[105%] ml-2"} z-50 flex flex-col gap-1 bg-white dark:bg-neutral-800 shadow-xl border border-slate-200 dark:border-neutral-700 rounded-xl p-1.5 min-w-[140px] animate-in fade-in zoom-in duration-200`}
+                  >
                     {/* Only show Edit if within 3 minutes of sending */}
-                    {(!msg.createdAt ||
-                      Date.now() - new Date(msg.createdAt).getTime() <=
-                        3 * 60 * 1000) && (
+                    {isSelf &&
+                      (!msg.createdAt ||
+                        Date.now() - new Date(msg.createdAt).getTime() <=
+                          3 * 60 * 1000) && (
+                        <button
+                          onClick={() => {
+                            if (onEditMessage) onEditMessage(msg);
+                            setSelectedMessageId(null);
+                          }}
+                          className="w-full text-left px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-lime-50 dark:hover:bg-neutral-700 rounded-lg transition-colors font-medium flex items-center justify-between"
+                        >
+                          Edit <span>✏️</span>
+                        </button>
+                      )}
+                    {isSelf && (
                       <button
                         onClick={() => {
-                          if (onEditMessage) onEditMessage(msg);
+                          if (onDeleteMessage) onDeleteMessage(msg);
                           setSelectedMessageId(null);
                         }}
-                        className="w-full text-left px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-lime-50 dark:hover:bg-neutral-700 rounded-lg transition-colors font-medium flex items-center justify-between"
+                        className="w-full text-left px-3 py-2 text-sm text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors font-medium flex items-center justify-between"
                       >
-                        Edit <span>✏️</span>
+                        Delete <span>🗑️</span>
                       </button>
                     )}
                     <button
                       onClick={() => {
-                        if (onDeleteMessage) onDeleteMessage(msg);
+                        if (onReplyMessage) onReplyMessage(msg);
                         setSelectedMessageId(null);
                       }}
-                      className="w-full text-left px-3 py-2 text-sm text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors font-medium flex items-center justify-between"
+                      className="w-full text-left px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-lime-50 dark:hover:bg-neutral-700 rounded-lg transition-colors font-medium flex items-center justify-between"
                     >
-                      Delete <span>🗑️</span>
+                      Reply <span>↩</span>
                     </button>
                   </div>
                 </>
@@ -183,7 +204,7 @@ const ChatMessages = ({
                 )}
                 <div
                   onDoubleClick={() => {
-                    if (isSelf && !msg.deleted) {
+                    if (!msg.deleted) {
                       setSelectedMessageId(
                         selectedMessageId === (msg._id || idx.toString())
                           ? null
@@ -194,9 +215,31 @@ const ChatMessages = ({
                   className={`p-4 rounded-2xl shadow-sm min-w-[100px] transition-all relative ${
                     isSelf
                       ? "bg-lime-200 dark:bg-lime-900 rounded-br-sm text-slate-800 dark:text-slate-100 cursor-pointer hover:brightness-95"
-                      : "bg-white dark:bg-neutral-800 rounded-bl-sm border border-slate-100 dark:border-neutral-700 text-slate-700 dark:text-slate-200"
-                  } ${msg.deleted ? "opacity-60 italic" : ""}`}
+                      : "bg-white dark:bg-neutral-800 rounded-bl-sm border border-slate-100 dark:border-neutral-700 text-slate-700 dark:text-slate-200 cursor-pointer hover:brightness-95"
+                  } ${msg.deleted ? "opacity-60 italic cursor-default" : ""}`}
                 >
+                  {msg.replyTo && (
+                    <div
+                      onClick={() => {
+                        // In future: could scroll to msg.replyTo._id
+                      }}
+                      className={`mb-2 p-2 rounded-lg text-xs opacity-90 border-l-[3px] overflow-hidden ${
+                        isSelf
+                          ? "bg-lime-100/70 dark:bg-lime-950/50 border-lime-600 dark:border-lime-400 text-lime-900 dark:text-lime-200"
+                          : "bg-slate-50 dark:bg-neutral-900 border-indigo-400 text-slate-700 dark:text-slate-300"
+                      }`}
+                    >
+                      <p
+                        className={`font-bold opacity-80 mb-0.5 ${isSelf ? "text-lime-700 dark:text-lime-400" : "text-indigo-600 dark:text-indigo-400"}`}
+                      >
+                        {msg.replyTo.senderName}
+                      </p>
+                      <p className="line-clamp-2 max-h-8 truncate whitespace-pre-wrap">
+                        {msg.replyTo.message}
+                      </p>
+                    </div>
+                  )}
+
                   {msg.deleted ? (
                     <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2">
                       🚫 This message was deleted

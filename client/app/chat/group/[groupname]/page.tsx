@@ -48,6 +48,8 @@ const GroupChatPage = ({ params }: PageProps) => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [replyingToMessage, setReplyingToMessage] =
+    useState<DisplayMessage | null>(null);
 
   // Fetch group
   useEffect(() => {
@@ -92,18 +94,33 @@ const GroupChatPage = ({ params }: PageProps) => {
       senderAvatar?: string;
       message: string;
       createdAt?: string;
+      replyOn?: string;
     }) => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          _id: data._id,
-          senderId: data.senderId,
-          message: data.message,
-          senderName: data.senderName,
-          senderAvatar: data.senderAvatar,
-          createdAt: data.createdAt || new Date().toISOString(),
-        },
-      ]);
+      setMessages((prev) => {
+        let replyTo;
+        if (data.replyOn) {
+          const found = prev.find((m) => m._id === data.replyOn);
+          if (found && found._id) {
+            replyTo = {
+              _id: found._id as string,
+              message: found.message,
+              senderName: (found.senderName || "User") as string,
+            };
+          }
+        }
+        return [
+          ...prev,
+          {
+            _id: data._id,
+            senderId: data.senderId,
+            message: data.message,
+            senderName: data.senderName,
+            senderAvatar: data.senderAvatar,
+            createdAt: data.createdAt || new Date().toISOString(),
+            replyTo,
+          },
+        ];
+      });
     };
 
     const editHandler = (data: { messageId: string; newText: string }) => {
@@ -206,6 +223,7 @@ const GroupChatPage = ({ params }: PageProps) => {
         groupName: group.name,
         message: inputMessage.trim(),
         tempId,
+        replyOn: replyingToMessage?._id,
       };
 
       socket.emit("send-group-message", payload);
@@ -219,16 +237,31 @@ const GroupChatPage = ({ params }: PageProps) => {
           senderAvatar: user.avatar,
           createdAt: new Date().toISOString(),
           _id: tempId,
+          replyTo: replyingToMessage
+            ? {
+                _id: replyingToMessage._id!,
+                message: replyingToMessage.message,
+                senderName: replyingToMessage.senderName || "User",
+              }
+            : undefined,
         },
       ]);
     }
     setInputMessage("");
+    setReplyingToMessage(null);
   };
 
   const handleEditMessage = (msg: DisplayMessage) => {
     if (!msg._id) return;
     setInputMessage(msg.message);
+    setReplyingToMessage(null);
     setEditingMessageId(msg._id);
+  };
+
+  const handleReplyMessage = (msg: DisplayMessage) => {
+    setEditingMessageId(null);
+    setInputMessage("");
+    setReplyingToMessage(msg);
   };
 
   const handleDeleteMessage = (msg: DisplayMessage) => {
@@ -316,6 +349,7 @@ const GroupChatPage = ({ params }: PageProps) => {
             emptyText="No messages yet. Start the conversation! 🎉"
             onEditMessage={handleEditMessage}
             onDeleteMessage={handleDeleteMessage}
+            onReplyMessage={handleReplyMessage}
           />
         </div>
       </div>
@@ -338,8 +372,26 @@ const GroupChatPage = ({ params }: PageProps) => {
             </button>
           </div>
         )}
+        {replyingToMessage && !editingMessageId && (
+          <div className="max-w-4xl mx-auto flex items-center justify-between bg-amber-200 dark:bg-amber-900/50 px-4 py-2 rounded-t-xl mb-[-10px] pb-3 text-sm text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-700/50 border-b-0">
+            <div className="flex flex-col flex-1 truncate pr-4">
+              <span className="font-bold text-amber-700 dark:text-amber-300 mb-0.5">
+                Replying to {replyingToMessage.senderName || "User"}
+              </span>
+              <span className="truncate opacity-80">
+                {replyingToMessage.message}
+              </span>
+            </div>
+            <button
+              onClick={() => setReplyingToMessage(null)}
+              className="text-amber-600 dark:text-amber-400 hover:text-rose-500 font-bold px-2 transition-colors self-start mt-1"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
         <div
-          className={`max-w-4xl mx-auto bg-white dark:bg-neutral-800 rounded-full flex items-center px-4 py-2 shadow-sm border border-slate-200 dark:border-neutral-700 focus-within:ring-2 focus-within:ring-amber-400 dark:focus-within:ring-amber-600 transition-shadow relative z-10 ${editingMessageId ? "rounded-tl-none rounded-tr-none border-t-0" : ""}`}
+          className={`max-w-4xl mx-auto bg-white dark:bg-neutral-800 rounded-full flex items-center px-4 py-2 shadow-sm border border-slate-200 dark:border-neutral-700 focus-within:ring-2 focus-within:ring-amber-400 dark:focus-within:ring-amber-600 transition-shadow relative z-10 ${editingMessageId || replyingToMessage ? "rounded-tl-none rounded-tr-none border-t-0" : ""}`}
         >
           <FaSmile className="text-slate-400 hover:text-amber-500 cursor-pointer transition-colors text-xl mr-3" />
           <FaPaperclip className="text-slate-400 hover:text-amber-500 cursor-pointer transition-colors text-xl mr-3" />
@@ -385,6 +437,13 @@ function toDisplay(m: ChatMessage): DisplayMessage {
     createdAt: m.createdAt,
     edited: m.edited,
     deleted: m.deleted,
+    replyTo: m.replyOn
+      ? {
+          _id: m.replyOn._id,
+          message: m.replyOn.message,
+          senderName: m.replyOn.sender?.name || "User",
+        }
+      : undefined,
   };
 }
 
