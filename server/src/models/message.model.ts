@@ -10,7 +10,7 @@ export interface IMessage extends Document {
   deleted?: boolean;
   reported?: boolean;
   read?: boolean;
-  replyOn?: [Types.ObjectId];
+  replyOn?: Types.ObjectId | any;
 }
 
 const messageSchema = new Schema<IMessage>(
@@ -54,12 +54,10 @@ const messageSchema = new Schema<IMessage>(
       type: Boolean,
       default: false,
     },
-    replyOn: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: "Message",
-      },
-    ],
+    replyOn: {
+      type: Schema.Types.ObjectId,
+      ref: "Message",
+    },
   },
   {
     timestamps: true,

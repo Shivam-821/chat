@@ -101,12 +101,11 @@ export const markNotificationAsRead = asyncHandler(
     }
 
     try {
-      await NotificationModel.updateOne(
+      await NotificationModel.deleteOne(
         {
           user: user._id,
           _id: notification_id,
         },
-        { $set: { read: true } },
       );
     } catch (error) {
       return res

@@ -101,6 +101,7 @@ export const initSocketListeners = (io: Server) => {
         message: string;
         senderName: string;
         tempId?: string;
+        replyOn?: string;
       }) => {
         const roomId = [data.senderId, data.receiverId].sort().join("_");
 
@@ -110,6 +111,7 @@ export const initSocketListeners = (io: Server) => {
             data.senderId,
             data.receiverId,
             data.message,
+            data.replyOn,
           );
 
           if (savedMessage) {
@@ -141,12 +143,14 @@ export const initSocketListeners = (io: Server) => {
         message: string;
         senderName: string;
         tempId?: string;
+        replyOn?: string;
       }) => {
         try {
           const savedMessage = await saveGroupMessage(
             data.senderId,
             data.groupId,
             data.message,
+            data.replyOn,
           );
 
           if (savedMessage) {

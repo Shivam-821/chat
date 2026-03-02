@@ -6,6 +6,7 @@ import { MessageModel } from "../models/message.model";
 import { IndividualMessageModel } from "../models/individual.model";
 import { GroupModel } from "../models/group.model";
 import type { AuthRequest } from "../middlewares/auth.middleware";
+import mongoose from "mongoose";
 
 const PAGE_SIZE = 25;
 
@@ -16,6 +17,7 @@ export const saveIndividualMessage = async (
   senderId: string,
   receiverId: string,
   message: string,
+  replyOn?: string,
 ) => {
   // Find the IndividualMessage chat document for this pair
   const chat = await IndividualMessageModel.findOne({
@@ -33,6 +35,7 @@ export const saveIndividualMessage = async (
     chatType: "IndividualMessage",
     message,
     type: "text",
+    replyOn: replyOn ? new mongoose.Types.ObjectId(replyOn) : undefined,
   });
 
   // Update lastMessage on the chat doc
@@ -50,6 +53,7 @@ export const saveGroupMessage = async (
   senderId: string,
   groupId: string,
   message: string,
+  replyOn?: string,
 ) => {
   const saved = await MessageModel.create({
     sender: senderId,
@@ -57,13 +61,13 @@ export const saveGroupMessage = async (
     chatType: "Group",
     message,
     type: "text",
+    replyOn: replyOn ? new mongoose.Types.ObjectId(replyOn) : undefined,
   });
 
   await GroupModel.findByIdAndUpdate(groupId, { lastMessage: saved._id });
 
   return saved;
 };
-
 
 export const getIndividualMessages = asyncHandler(
   async (req: AuthRequest, res: Response) => {
@@ -100,6 +104,11 @@ export const getIndividualMessages = asyncHandler(
       .skip((page - 1) * PAGE_SIZE)
       .limit(PAGE_SIZE)
       .populate("sender", "name avatar")
+      .populate({
+        path: "replyOn",
+        select: "message sender",
+        populate: { path: "sender", select: "name" },
+      })
       .lean();
 
     // Return in ascending order so UI renders oldest → newest
@@ -118,7 +127,6 @@ export const getIndividualMessages = asyncHandler(
     );
   },
 );
-
 
 export const getGroupMessages = asyncHandler(
   async (req: AuthRequest, res: Response) => {
@@ -141,6 +149,11 @@ export const getGroupMessages = asyncHandler(
       .skip((page - 1) * PAGE_SIZE)
       .limit(PAGE_SIZE)
       .populate("sender", "name avatar")
+      .populate({
+        path: "replyOn",
+        select: "message sender",
+        populate: { path: "sender", select: "name" },
+      })
       .lean();
 
     messages.reverse();
