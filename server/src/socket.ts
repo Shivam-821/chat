@@ -264,6 +264,22 @@ export const initSocketListeners = (io: Server) => {
       },
     );
 
+    // --------- VIDEO CALL SOCKET STARTS ----------
+
+    socket.on("join-video-call", async (data: { roomId: string }) => {
+      socket.join(data.roomId);
+    });
+
+    socket.on(
+      "guest-join-video-call",
+      async (data: { roomId: string; guestId: string }) => {
+        socket.join(data.roomId);
+        // emit message to the host about the guest join the meeting.
+      },
+    );
+
+    // --------- VIDEO CALL SOCKET ENDS ----------
+
     // DISCONNECT
     socket.on("disconnect", async () => {
       // console.log(`Disconnected: ${socket.id}`);

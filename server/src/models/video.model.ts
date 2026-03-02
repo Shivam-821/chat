@@ -5,7 +5,7 @@ export interface IVideo extends Document {
   guest?: Types.ObjectId;
   roomID: string;
   startedAt: Date;
-  endedAt: Date;
+  endedAt?: Date;
   isEnded: boolean;
 }
 
@@ -13,6 +13,7 @@ const videoSchema = new Schema<IVideo>({
   host: {
     type: Schema.Types.ObjectId,
     ref: "User",
+    required: true,
   },
   guest: {
     type: Schema.Types.ObjectId,
