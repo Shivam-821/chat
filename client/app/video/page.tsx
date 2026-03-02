@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { generateRoomCode } from "@/utils/generateRoomCode";
+import { useState, useEffect } from "react";
 import {
   FaVideo,
   FaCalendarPlus,
@@ -9,6 +10,10 @@ import {
   FaCalendarDay,
   FaHistory,
 } from "react-icons/fa";
+import { useRouter } from "next/navigation";
+import { createVideoCallApi } from "@/api/api";
+import { useAuth } from "@/context/AuthContext";
+import toast from "react-hot-toast";
 
 const VideoPage = () => {
   const [time, setTime] = useState(new Date());
@@ -17,6 +22,9 @@ const VideoPage = () => {
   const [scheduleMeeting, setScheduleMeeting] = useState(false);
   const [joinMeeting, setJoinMeeting] = useState(false);
   const [scheduledDate, setScheduledDate] = useState("");
+  const [roomCode, setRoomCode] = useState("") 
+  const router = useRouter()
+  const { token } = useAuth();
 
   const d = new Date();
   const todayDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -80,6 +88,11 @@ const VideoPage = () => {
       datetime: "Oct 22, 11:15 AM",
     },
   ];
+
+  const handleInstantMeeting = () => {
+    setStartMetting(true);
+    setRoomCode(generateRoomCode());
+  };
 
   return (
     <div className="min-h-[calc(100vh-64px)] w-full p-6 md:p-8 flex flex-col lg:flex-row gap-10">
@@ -198,7 +211,7 @@ const VideoPage = () => {
 
           {/* Instant Meeting */}
           <div
-            onClick={() => setStartMetting(true)}
+            onClick={() => handleInstantMeeting()}
             className="group relative w-full flex flex-col items-center justify-center gap-4 px-8 py-10 bg-pink-400 dark:bg-rose-600 text-black dark:text-white border-4 border-black dark:border-white rounded-3xl hover:-translate-y-2 hover:shadow-[8px_8px_0_0_#000] dark:hover:shadow-[8px_8px_0_0_#fff] transition-all shadow-[4px_4px_0_0_#000] dark:shadow-[4px_4px_0_0_#fff] cursor-pointer -rotate-1 hover:rotate-0"
           >
             <FaVideo className="text-6xl mb-2 group-hover:scale-110 group-hover:rotate-12 transition-transform" />
@@ -231,8 +244,39 @@ const VideoPage = () => {
               Ready to jump right in? We'll generate a secure room for you
               instantly.
             </p>
+            <div className="space-y-3 mb-10">
+              <label
+                htmlFor="roomCode"
+                className="block text-sm font-black uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-100 ml-1"
+              >
+                Share this code with your friend
+              </label>
+              <div className="relative group">
+                <input
+                  id="roomCode"
+                  type="text"
+                  readOnly
+                  value={roomCode}
+                  className="w-full bg-neutral-50 dark:bg-neutral-900 border-4 border-black dark:border-white p-5 pr-20 font-mono text-3xl font-black rounded-2xl shadow-[6px_6px_0_0_#000] dark:shadow-[6px_6px_0_0_#fff] focus:outline-none"
+                />
+                <button
+                  onClick={() => navigator.clipboard.writeText(roomCode)}
+                  className="absolute right-3 top-4 bg-lime-300 dark:bg-teal-500 border-4 border-black dark:border-white rounded-xl px-4 py-2 font-black text-sm text-black dark:text-white hover:bg-lime-400 dark:hover:bg-teal-600 hover:scale-105 transition-all shadow-[2px_2px_0_0_#000] dark:shadow-[2px_2px_0_0_#fff]"
+                >
+                  Copy
+                </button>
+              </div>
+            </div>
             <button
-              onClick={() => setStartMetting(false)}
+              onClick={ async() => {
+                setStartMetting(false)
+                const res = await createVideoCallApi(token!, roomCode)
+                if(res.statusCode === 201){
+                  router.push(`/video/${roomCode}`)
+                } else {
+                  toast.error("Failed to create video call")
+                }
+              }}
               className="w-full bg-pink-400 dark:bg-rose-600 text-black dark:text-white font-black text-2xl py-4 border-4 border-black dark:border-white rounded-2xl shadow-[4px_4px_0_0_#000] dark:shadow-[4px_4px_0_0_#fff] hover:-translate-y-1 hover:shadow-[6px_6px_0_0_#000] dark:hover:shadow-[6px_6px_0_0_#fff] active:translate-y-1 active:shadow-none transition-all uppercase tracking-wider"
             >
               Go Live Now!

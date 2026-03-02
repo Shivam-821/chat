@@ -609,3 +609,19 @@ export const getKeysApi = async (userId: string, token: string) => {
     return null;
   }
 };
+
+// video call api
+export const createVideoCallApi = async (token: string, roomCode: string) => {
+  try {
+    const res = await axios.post(
+      `${API_URL}/video-call/create`,
+      { roomCode },
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+    toast.success("Video call created successfully!");
+    return res.data;
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || "Failed to create video call");
+    return null;
+  }
+};

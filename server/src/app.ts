@@ -28,6 +28,7 @@ import taskRouter from "./routes/task.routes";
 import notificationRouter from "./routes/notification.routes";
 import groupRouter from "./routes/group.routes";
 import messageRouter from "./routes/message.routes";
+import videoRouter from "./routes/video.routes";
 
 import keysRouter from "./routes/keys.routes";
 
@@ -38,5 +39,6 @@ app.use("/api/v1/notifications", notificationRouter);
 app.use("/api/v1/groups", groupRouter);
 app.use("/api/v1/messages", messageRouter);
 app.use("/api/v1/keys", keysRouter);
+app.use("/api/v1/video-call", videoRouter);
 
 export { app };
