@@ -151,6 +151,19 @@ const GroupChatPage = ({ params }: PageProps) => {
       );
     };
 
+    const reactionHandler = (data: {
+      messageId: string;
+      reactions: { user: string; reaction: string }[];
+    }) => {
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg._id === data.messageId
+            ? { ...msg, reactions: data.reactions }
+            : msg,
+        ),
+      );
+    };
+
     const typingHandler = (data: {
       senderId: string;
       senderName: string;
@@ -169,6 +182,7 @@ const GroupChatPage = ({ params }: PageProps) => {
     socket.on("message-edited", editHandler);
     socket.on("message-deleted", deleteHandler);
     socket.on("message-sent-success", successHandler);
+    socket.on("message-reacted", reactionHandler);
     socket.on("group-typing", typingHandler);
 
     return () => {
@@ -176,6 +190,7 @@ const GroupChatPage = ({ params }: PageProps) => {
       socket.off("message-edited", editHandler);
       socket.off("message-deleted", deleteHandler);
       socket.off("message-sent-success", successHandler);
+      socket.off("message-reacted", reactionHandler);
       socket.off("group-typing", typingHandler);
     };
   }, [socket, group?._id, user?._id]);
@@ -280,6 +295,15 @@ const GroupChatPage = ({ params }: PageProps) => {
     );
   };
 
+  const handleReactMessage = (msg: DisplayMessage, reaction: string) => {
+    if (!msg._id || !group?._id) return;
+    socket.emit("react-message", {
+      messageId: msg._id,
+      groupId: group._id,
+      reaction,
+    });
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") sendMessage();
   };
@@ -350,6 +374,7 @@ const GroupChatPage = ({ params }: PageProps) => {
             onEditMessage={handleEditMessage}
             onDeleteMessage={handleDeleteMessage}
             onReplyMessage={handleReplyMessage}
+            onReactMessage={handleReactMessage}
           />
         </div>
       </div>
@@ -437,6 +462,7 @@ function toDisplay(m: ChatMessage): DisplayMessage {
     createdAt: m.createdAt,
     edited: m.edited,
     deleted: m.deleted,
+    reactions: m.reactions,
     replyTo: m.replyOn
       ? {
           _id: m.replyOn._id,

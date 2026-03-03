@@ -9,6 +9,7 @@ export interface IMessage extends Document {
   edited?: boolean;
   deleted?: boolean;
   reported?: boolean;
+  reactions: { user: Types.ObjectId; reaction: string }[];
   read?: boolean;
   replyOn?: Types.ObjectId | any;
 }
@@ -34,6 +35,15 @@ const messageSchema = new Schema<IMessage>(
       type: String,
       required: true,
     },
+    reactions: [
+      {
+        user: {
+          type: Schema.Types.ObjectId,
+          ref: "User",
+        },
+        reaction: String,
+      },
+    ],
     type: {
       type: String,
       required: true,

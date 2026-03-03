@@ -539,6 +539,7 @@ export interface ChatMessage {
   createdAt: string;
   edited?: boolean;
   deleted?: boolean;
+  reactions?: { user: string; reaction: string }[];
   replyOn?: { _id: string; message: string; sender: { name: string } };
 }
 

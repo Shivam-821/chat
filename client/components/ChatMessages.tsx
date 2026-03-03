@@ -11,6 +11,7 @@ export interface DisplayMessage {
   createdAt?: string;
   edited?: boolean;
   deleted?: boolean;
+  reactions?: { user: string; reaction: string }[];
   replyTo?: {
     _id: string;
     message: string;
@@ -33,6 +34,7 @@ interface ChatMessagesProps {
   onEditMessage?: (msg: DisplayMessage) => void;
   onDeleteMessage?: (msg: DisplayMessage) => void;
   onReplyMessage?: (msg: DisplayMessage) => void;
+  onReactMessage?: (msg: DisplayMessage, reaction: string) => void;
 }
 
 const ChatMessages = ({
@@ -48,6 +50,7 @@ const ChatMessages = ({
   onEditMessage,
   onDeleteMessage,
   onReplyMessage,
+  onReactMessage,
 }: ChatMessagesProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -157,6 +160,35 @@ const ChatMessages = ({
                   <div
                     className={`absolute top-1/2 -translate-y-1/2 ${isSelf ? "right-[105%] mr-2" : "left-[105%] ml-2"} z-50 flex flex-col gap-1 bg-white dark:bg-neutral-800 shadow-xl border border-slate-200 dark:border-neutral-700 rounded-xl p-1.5 min-w-[140px] animate-in fade-in zoom-in duration-200`}
                   >
+                    {/* Reaction Picker Row */}
+                    <div className="flex items-center justify-between px-2 py-1.5 mb-1 border-b border-slate-100 dark:border-neutral-700">
+                      {[
+                        "👍",
+                        "❤️",
+                        "😂",
+                        "😮",
+                        "😍",
+                        "😭",
+                        "😉",
+                        "👌",
+                        "👏",
+                        "🤣",
+                        "😡",
+                      ].map((emoji) => (
+                        <button
+                          key={emoji}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (onReactMessage) onReactMessage(msg, emoji);
+                            setSelectedMessageId(null);
+                          }}
+                          className="hover:scale-125 transition-transform text-lg"
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+
                     {/* Only show Edit if within 3 minutes of sending */}
                     {isSelf &&
                       (!msg.createdAt ||
@@ -216,7 +248,9 @@ const ChatMessages = ({
                     isSelf
                       ? "bg-lime-200 dark:bg-lime-900 rounded-br-sm text-slate-800 dark:text-slate-100 cursor-pointer hover:brightness-95"
                       : "bg-white dark:bg-neutral-800 rounded-bl-sm border border-slate-100 dark:border-neutral-700 text-slate-700 dark:text-slate-200 cursor-pointer hover:brightness-95"
-                  } ${msg.deleted ? "opacity-60 italic cursor-default" : ""}`}
+                  } ${msg.deleted ? "opacity-60 italic cursor-default" : ""} ${
+                    msg.reactions && msg.reactions.length > 0 ? "mb-3" : ""
+                  }`}
                 >
                   {msg.replyTo && (
                     <div
@@ -246,6 +280,50 @@ const ChatMessages = ({
                     </p>
                   ) : (
                     <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
+                  )}
+
+                  {msg.reactions && msg.reactions.length > 0 && (
+                    <div
+                      className={`absolute -bottom-3.5 flex flex-wrap gap-1 z-10 ${
+                        isSelf ? "right-2" : "left-2"
+                      }`}
+                    >
+                      {Object.entries(
+                        msg.reactions.reduce(
+                          (acc, r) => {
+                            if (!acc[r.reaction])
+                              acc[r.reaction] = { count: 0, me: false };
+                            acc[r.reaction].count += 1;
+                            if (r.user === currentUserId)
+                              acc[r.reaction].me = true;
+                            return acc;
+                          },
+                          {} as Record<string, { count: number; me: boolean }>,
+                        ),
+                      ).map(([emoji, { count, me }]) => (
+                        <button
+                          key={emoji}
+                          disabled={msg.deleted}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (onReactMessage && !msg.deleted)
+                              onReactMessage(msg, emoji);
+                          }}
+                          className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[12px] font-bold border transition-colors shadow-sm ${
+                            !showSenderInfo
+                              ? "bg-transparent border-transparent shadow-none text-[14px]"
+                              : me
+                                ? "bg-lime-200 border-lime-400 text-lime-900 dark:bg-lime-900 dark:border-lime-700 dark:text-lime-200"
+                                : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50 dark:bg-neutral-800 dark:border-neutral-600 dark:text-slate-300 dark:hover:bg-neutral-700"
+                          }`}
+                        >
+                          <span>{emoji}</span>
+                          {showSenderInfo && count > 1 && (
+                            <span className="opacity-90">{count}</span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
                   )}
 
                   <div

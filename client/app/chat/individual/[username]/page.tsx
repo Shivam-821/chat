@@ -201,6 +201,19 @@ const IndividualChatPage = ({ params }: PageProps) => {
       );
     };
 
+    const reactionHandler = (data: {
+      messageId: string;
+      reactions: { user: string; reaction: string }[];
+    }) => {
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg._id === data.messageId
+            ? { ...msg, reactions: data.reactions }
+            : msg,
+        ),
+      );
+    };
+
     const typingHandler = (data: { senderId: string }) => {
       if (data.senderId === contact?._id) {
         setTypingUser(data.senderId);
@@ -215,6 +228,7 @@ const IndividualChatPage = ({ params }: PageProps) => {
     socket.on("message-edited", editHandler);
     socket.on("message-deleted", deleteHandler);
     socket.on("message-sent-success", successHandler);
+    socket.on("message-reacted", reactionHandler);
     socket.on("typing", typingHandler);
 
     return () => {
@@ -222,6 +236,7 @@ const IndividualChatPage = ({ params }: PageProps) => {
       socket.off("message-edited", editHandler);
       socket.off("message-deleted", deleteHandler);
       socket.off("message-sent-success", successHandler);
+      socket.off("message-reacted", reactionHandler);
       socket.off("typing", typingHandler);
     };
   }, [socket, decryptPayload, contact?._id]);
@@ -380,6 +395,15 @@ const IndividualChatPage = ({ params }: PageProps) => {
     );
   };
 
+  const handleReactMessage = (msg: DisplayMessage, reaction: string) => {
+    if (!msg._id || !contact?._id) return;
+    socket.emit("react-message", {
+      messageId: msg._id,
+      receiverId: contact._id,
+      reaction,
+    });
+  };
+
   return (
     <div className="flex flex-col h-full bg-lime-50 dark:bg-neutral-950 w-full relative overflow-hidden">
       {/* Chat Header */}
@@ -446,6 +470,7 @@ const IndividualChatPage = ({ params }: PageProps) => {
             onEditMessage={handleEditMessage}
             onDeleteMessage={handleDeleteMessage}
             onReplyMessage={handleReplyMessage}
+            onReactMessage={handleReactMessage}
           />
         </div>
       </div>
@@ -536,6 +561,7 @@ function toDisplay(m: ChatMessage): DisplayMessage {
     createdAt: m.createdAt,
     edited: m.edited,
     deleted: m.deleted,
+    reactions: m.reactions,
     replyTo: m.replyOn
       ? {
           _id: m.replyOn._id,

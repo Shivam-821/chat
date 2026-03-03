@@ -240,10 +240,10 @@ export const initSocketListeners = (io: Server) => {
           const { messageId, receiverId, groupId } = data;
           const msg = await MessageModel.findById(messageId);
 
-          if (!msg || msg.sender.toString() !== (socket as any).userId) return; // Only sender can delete
+          if (!msg || msg.sender.toString() !== (socket as any).userId) return;
 
           msg.deleted = true;
-          msg.message = "This message was deleted"; // Overwrite encrypted text for safety
+          msg.message = "This message was deleted";
           await msg.save();
 
           const payload = { messageId, isGroup: !!groupId };
@@ -260,6 +260,93 @@ export const initSocketListeners = (io: Server) => {
           }
         } catch (err) {
           console.error("[delete-message error]:", err);
+        }
+      },
+    );
+
+    // REACT MESSAGE
+    socket.on(
+      "react-message",
+      async (data: {
+        messageId: string;
+        receiverId?: string;
+        groupId?: string;
+        reaction: string;
+      }) => {
+        try {
+          const { messageId, receiverId, groupId, reaction } = data;
+          const allowedReactions = [
+            "😀",
+            "👍",
+            "😂",
+            "😍",
+            "🤣",
+            "👌",
+            "👏",
+            "😭",
+            "😡",
+            "❤️",
+            "😉",
+            "😮",
+          ];
+
+          if (!allowedReactions.includes(reaction)) return;
+
+          const msg = await MessageModel.findById(messageId);
+          const userId = (socket as any).userId;
+
+          if (!msg || msg.sender.toString() === userId) return;
+
+          // Use Mongoose atomic operations to avoid VersionError on highly concurrent reactions.
+          let updatedMsg = await MessageModel.findOneAndUpdate(
+            { _id: messageId, "reactions.user": userId },
+            { $pull: { reactions: { user: userId } } },
+            { new: true },
+          );
+
+          let finalReactionStr = reaction;
+
+          // If they didn't already have THIS reaction, push it.
+          // (If they did have THIS reaction, the pull above just toggles it off, so we don't push it back).
+          const oldReactionPos = msg.reactions.findIndex(
+            (r: any) => r.user.toString() === userId,
+          );
+          const togglingOff =
+            oldReactionPos !== -1 &&
+            msg.reactions[oldReactionPos]?.reaction === reaction;
+
+          if (!togglingOff) {
+            updatedMsg = await MessageModel.findOneAndUpdate(
+              { _id: messageId },
+              { $push: { reactions: { user: userId, reaction } } },
+              { new: true },
+            );
+          } else {
+            finalReactionStr = ""; // Toggled off
+          }
+
+          if (!updatedMsg) {
+            updatedMsg = await MessageModel.findById(messageId);
+          }
+
+          if (!updatedMsg) return;
+
+          const payload = {
+            messageId,
+            reactions: updatedMsg.reactions,
+            isGroup: !!groupId,
+          };
+
+          if (groupId) {
+            socket.to(groupId).emit("message-reacted", payload);
+            socket.emit("message-reacted", payload);
+          } else if (receiverId) {
+            const roomId = [userId, receiverId].sort().join("_");
+            socket.to(roomId).emit("message-reacted", payload);
+            socket.emit("message-reacted", payload);
+          }
+        } catch (err) {
+          console.error("[react-message error]:", err);
         }
       },
     );
