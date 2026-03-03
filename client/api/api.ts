@@ -625,3 +625,35 @@ export const createVideoCallApi = async (token: string, roomCode: string) => {
     return null;
   }
 };
+
+export const joinVideoCallApi = async (token: string, roomCode: string) => {
+  try {
+    const res = await axios.post(
+      `${API_URL}/video-call/join`,
+      { roomCode },
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+    toast.success("Joined video call successfully!");
+    return res.data;
+  } catch (error: any) {
+    if (error.response?.status !== 404) {
+      toast.error(error.response?.data?.message || "Failed to join video call");
+    }
+    return { success: false, status: error.response?.status };
+  }
+};
+
+export const endVideoCallApi = async (token: string, roomCode: string) => {
+  try {
+    const res = await axios.post(
+      `${API_URL}/video-call/end`,
+      { roomCode },
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+    toast.success("Video call ended.");
+    return res.data;
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || "Failed to end call");
+    return null;
+  }
+};

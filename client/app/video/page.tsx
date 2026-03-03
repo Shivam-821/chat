@@ -22,8 +22,9 @@ const VideoPage = () => {
   const [scheduleMeeting, setScheduleMeeting] = useState(false);
   const [joinMeeting, setJoinMeeting] = useState(false);
   const [scheduledDate, setScheduledDate] = useState("");
-  const [roomCode, setRoomCode] = useState("") 
-  const router = useRouter()
+  const [roomCode, setRoomCode] = useState("");
+  const [joinRoomCode, setJoinRoomCode] = useState("");
+  const router = useRouter();
   const { token } = useAuth();
 
   const d = new Date();
@@ -268,13 +269,13 @@ const VideoPage = () => {
               </div>
             </div>
             <button
-              onClick={ async() => {
-                setStartMetting(false)
-                const res = await createVideoCallApi(token!, roomCode)
-                if(res.statusCode === 201){
-                  router.push(`/video/${roomCode}`)
+              onClick={async () => {
+                setStartMetting(false);
+                const res = await createVideoCallApi(token!, roomCode);
+                if (res.statusCode === 201) {
+                  router.push(`/video/${roomCode}`);
                 } else {
-                  toast.error("Failed to create video call")
+                  toast.error("Failed to create video call");
                 }
               }}
               className="w-full bg-pink-400 dark:bg-rose-600 text-black dark:text-white font-black text-2xl py-4 border-4 border-black dark:border-white rounded-2xl shadow-[4px_4px_0_0_#000] dark:shadow-[4px_4px_0_0_#fff] hover:-translate-y-1 hover:shadow-[6px_6px_0_0_#000] dark:hover:shadow-[6px_6px_0_0_#fff] active:translate-y-1 active:shadow-none transition-all uppercase tracking-wider"
@@ -343,11 +344,23 @@ const VideoPage = () => {
               <input
                 type="text"
                 placeholder="Paste Meeting ID or Link"
+                value={joinRoomCode}
+                onChange={(e) => setJoinRoomCode(e.target.value)}
                 className="w-full bg-yellow-100 dark:bg-neutral-700 text-black dark:text-white font-bold text-lg p-4 border-4 border-black dark:border-white rounded-xl focus:outline-none focus:ring-4 focus:ring-yellow-400 dark:focus:ring-emerald-500 shadow-[inset_2px_2px_0_0_rgba(0,0,0,0.1)] placeholder:text-neutral-500"
               />
             </div>
             <button
-              onClick={() => setJoinMeeting(false)}
+              onClick={() => {
+                if (!joinRoomCode.trim()) {
+                  toast.error("Please enter a valid room code or link");
+                  return;
+                }
+                setJoinMeeting(false);
+                // Extract just the room code if a full URL was pasted
+                const parts = joinRoomCode.split("/");
+                const finalCode = parts[parts.length - 1].trim();
+                router.push(`/video/${finalCode}`);
+              }}
               className="w-full bg-yellow-400 dark:bg-emerald-500 text-black dark:text-white font-black text-2xl py-4 border-4 border-black dark:border-white rounded-2xl shadow-[4px_4px_0_0_#000] dark:shadow-[4px_4px_0_0_#fff] hover:-translate-y-1 hover:shadow-[6px_6px_0_0_#000] dark:hover:shadow-[6px_6px_0_0_#fff] active:translate-y-1 active:shadow-none transition-all uppercase tracking-wider"
             >
               Enter Room
