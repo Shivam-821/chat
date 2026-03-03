@@ -70,7 +70,7 @@ export const joinVideoCall = asyncHandler(
       $and: [{ roomID: roomCode }, { isEnded: false }],
     });
     if (!existVideoCall) {
-      return res.status(400).json(new ApiError(400, "Video call not found"));
+      return res.status(404).json(new ApiError(404, "Video call not found"));
     }
 
     // Check if user is the host reconnecting

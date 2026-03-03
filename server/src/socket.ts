@@ -266,15 +266,65 @@ export const initSocketListeners = (io: Server) => {
 
     // --------- VIDEO CALL SOCKET STARTS ----------
 
-    socket.on("join-video-call", async (data: { roomId: string }) => {
-      socket.join(data.roomId);
+    // 1. Both users join the room
+    socket.on(
+      "join-video-call",
+      (data: { roomId: string; role: "host" | "guest" }) => {
+        socket.join(data.roomId);
+        (socket as any).videoRoomId = data.roomId;
+        (socket as any).videoRole = data.role;
+
+        // When a guest joins, notify the host so they can start the WebRTC Offer
+        if (data.role === "guest") {
+          socket.to(data.roomId).emit("user-joined-video", { role: data.role });
+        }
+      },
+    );
+
+    // 2. Host sends offer
+    socket.on("video-offer", (data: { roomId: string; offer: any }) => {
+      // Send the offer to everyone else in the room (the guest)
+      socket.to(data.roomId).emit("video-offer", { offer: data.offer });
     });
 
+    // 3. Guest sends answer
+    socket.on("video-answer", (data: { roomId: string; answer: any }) => {
+      // Send the answer to everyone else in the room (the host)
+      socket.to(data.roomId).emit("video-answer", { answer: data.answer });
+    });
+
+    // 4. Exchanging ICE candidates
     socket.on(
-      "guest-join-video-call",
-      async (data: { roomId: string; guestId: string }) => {
-        socket.join(data.roomId);
-        // emit message to the host about the guest join the meeting.
+      "video-ice-candidate",
+      (data: { roomId: string; candidate: any }) => {
+        socket
+          .to(data.roomId)
+          .emit("video-ice-candidate", { candidate: data.candidate });
+      },
+    );
+
+    // 5. Media Toggle States
+    socket.on(
+      "toggle-video",
+      (data: { roomId: string; isVideoOff: boolean }) => {
+        socket
+          .to(data.roomId)
+          .emit("toggle-video", { isVideoOff: data.isVideoOff });
+      },
+    );
+
+    socket.on("toggle-mic", (data: { roomId: string; isMuted: boolean }) => {
+      socket.to(data.roomId).emit("toggle-mic", { isMuted: data.isMuted });
+    });
+
+    // 6. Leaving Call
+    socket.on(
+      "leave-video-call",
+      (data: { roomId: string; role: "host" | "guest" }) => {
+        socket.leave(data.roomId);
+        socket
+          .to(data.roomId)
+          .emit("user-left-video-call", { role: data.role });
       },
     );
 
@@ -282,7 +332,14 @@ export const initSocketListeners = (io: Server) => {
 
     // DISCONNECT
     socket.on("disconnect", async () => {
-      // console.log(`Disconnected: ${socket.id}`);
+      // Handle Video Call Disconnect Recovery
+      const videoRoomId = (socket as any).videoRoomId;
+      const videoRole = (socket as any).videoRole;
+      if (videoRoomId && videoRole) {
+        socket
+          .to(videoRoomId)
+          .emit("user-left-video-call", { role: videoRole });
+      }
 
       const userId = (socket as any).userId;
 
@@ -295,8 +352,6 @@ export const initSocketListeners = (io: Server) => {
         await redis.del(`online:${userId}`);
 
         await updateOnlineStatus(userId, false);
-
-        // console.log(`${userId} offline`);
       }
     });
   });
