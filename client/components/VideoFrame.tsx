@@ -31,7 +31,9 @@ export const VideoFrame1 = ({
     if (remoteVideoRef.current) {
       if (remoteStream) {
         remoteVideoRef.current.srcObject = remoteStream;
-        remoteVideoRef.current.play().catch(console.error);
+        remoteVideoRef.current.play().catch((e) => {
+          if (e.name !== "AbortError") console.error(e);
+        });
       } else {
         remoteVideoRef.current.srcObject = null;
       }
@@ -78,7 +80,7 @@ export const VideoFrame1 = ({
         {isRemoteCameraOn ? (
           <video
             ref={remoteVideoRef}
-            autoPlay 
+            autoPlay
             playsInline
             className="h-full w-full object-cover"
           />
@@ -146,7 +148,9 @@ export const VideoFrame2 = ({
     if (remoteVideoRef.current) {
       if (remoteStream) {
         remoteVideoRef.current.srcObject = remoteStream;
-        remoteVideoRef.current.play().catch(console.error);
+        remoteVideoRef.current.play().catch((e) => {
+          if (e.name !== "AbortError") console.error(e);
+        });
       } else {
         remoteVideoRef.current.srcObject = null;
       }
