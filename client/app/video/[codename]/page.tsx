@@ -309,6 +309,7 @@ const VideoCallPage = ({ params }: PageProps) => {
 
       socket.on("user-left-video-call", (data: { role: string }) => {
         if (data.role === "host") {
+          localStorage.removeItem(`video-chat-${codename}`);
           toast.error("Host has ended the call.");
           setTimeout(() => {
             window.location.href = "/chat";
@@ -370,6 +371,7 @@ const VideoCallPage = ({ params }: PageProps) => {
     socket.emit("leave-video-call", { roomId: codename, role });
 
     if (role === "host") {
+      localStorage.removeItem(`video-chat-${codename}`);
       // Actually terminating the call session in the DB
       try {
         const { endVideoCallApi } = await import("@/api/api");
@@ -422,6 +424,76 @@ const VideoCallPage = ({ params }: PageProps) => {
   const [showMenu, setShowMenu] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [callDuration, setCallDuration] = useState(0); // seconds
+
+  const [messages, setMessages] = useState<
+    { sender: string; text: string; time: string; system?: boolean }[]
+  >([]);
+  const [messageText, setMessageText] = useState("");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Load messages from localStorage on mount
+  useEffect(() => {
+    if (!codename) return;
+    const stored = localStorage.getItem(`video-chat-${codename}`);
+    if (stored) {
+      try {
+        setMessages(JSON.parse(stored));
+      } catch (e) {}
+    }
+  }, [codename]);
+
+  // Handle incoming messages
+  useEffect(() => {
+    if (!socket.connected) return;
+    const handleNewMessage = (data: {
+      sender: string;
+      text: string;
+      time: string;
+    }) => {
+      setMessages((prev) => {
+        const updated = [...prev, data];
+        localStorage.setItem(`video-chat-${codename}`, JSON.stringify(updated));
+        return updated;
+      });
+    };
+    socket.on("video-chat-message", handleNewMessage);
+    return () => {
+      socket.off("video-chat-message", handleNewMessage);
+    };
+  }, [socket, codename]);
+
+  // Auto-scroll chat
+  useEffect(() => {
+    if (isChatOpen) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, isChatOpen]);
+
+  const handleSendMessage = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!messageText.trim() || !user) return;
+
+    const newMessage = {
+      sender: user.username || user.name || "User",
+      text: messageText,
+      time: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    };
+
+    setMessages((prev) => {
+      const updated = [...prev, newMessage];
+      localStorage.setItem(`video-chat-${codename}`, JSON.stringify(updated));
+      return updated;
+    });
+
+    socket.emit("video-chat-message", {
+      roomId: codename,
+      message: newMessage,
+    });
+    setMessageText("");
+  };
 
   // Start call timer when joined
   useEffect(() => {
@@ -640,7 +712,7 @@ const VideoCallPage = ({ params }: PageProps) => {
           >
             <MessageSquare size={20} />
             {/* Unread dot simulation */}
-            {!isChatOpen && (
+            {!isChatOpen && messages.length > 0 && (
               <span className="absolute top-0 right-0 h-3 w-3 bg-red-500 border-2 border-white dark:border-neutral-900 rounded-full"></span>
             )}
           </button>
@@ -760,39 +832,51 @@ const VideoCallPage = ({ params }: PageProps) => {
             <div className="text-center text-xs text-neutral-400 dark:text-neutral-500 my-2">
               Messages will be deleted when the call ends.
             </div>
-            {/* Simulation of a received message */}
-            <div className="flex flex-col gap-1 items-start">
-              <span className="text-[10px] font-medium text-neutral-500 px-1">
-                User 2 • 11:30 AM
-              </span>
-              <div className="bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 px-3 py-2 rounded-2xl rounded-tl-sm text-sm max-w-[85%] shadow-sm">
-                Hey, can you see my screen now?
-              </div>
-            </div>
-            {/* Simulation of a sent message */}
-            <div className="flex flex-col gap-1 items-end mt-2">
-              <span className="text-[10px] font-medium text-neutral-500 px-1">
-                You • 11:31 AM
-              </span>
-              <div className="bg-lime-500 text-white px-3 py-2 rounded-2xl rounded-tr-sm text-sm max-w-[85%] shadow-sm">
-                Yes, looks good!
-              </div>
-            </div>
+
+            {messages.map((msg, i) => {
+              const isSelf =
+                msg.sender === (user?.username || user?.name || "User");
+              return (
+                <div
+                  key={i}
+                  className={`flex flex-col gap-1 ${isSelf ? "items-end mt-2" : "items-start"}`}
+                >
+                  <span className="text-[10px] font-medium text-neutral-500 px-1">
+                    {msg.sender} • {msg.time}
+                  </span>
+                  <div
+                    className={`${isSelf ? "bg-lime-500 text-white rounded-tr-sm" : "bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 rounded-tl-sm"} px-3 py-2 rounded-2xl text-sm max-w-[85%] shadow-sm`}
+                  >
+                    {msg.text}
+                  </div>
+                </div>
+              );
+            })}
+            <div ref={messagesEndRef} />
           </div>
 
           {/* Input Area */}
-          <div className="p-3 border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 rounded-b-2xl">
+          <form
+            onSubmit={handleSendMessage}
+            className="p-3 border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 rounded-b-2xl"
+          >
             <div className="flex items-center gap-2">
               <input
                 type="text"
+                value={messageText}
+                onChange={(e) => setMessageText(e.target.value)}
                 placeholder="Send a message..."
                 className="flex-1 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-lime-500 dark:text-neutral-200 w-full"
               />
-              <button className="h-9 w-9 bg-lime-500 hover:bg-lime-600 text-white rounded-full flex items-center justify-center shrink-0 transition-colors shadow-sm">
+              <button
+                type="submit"
+                disabled={!messageText.trim()}
+                className="h-9 w-9 bg-lime-500 hover:bg-lime-600 disabled:opacity-50 text-white rounded-full flex items-center justify-center shrink-0 transition-colors shadow-sm"
+              >
                 <Send size={16} className="-ml-0.5" />
               </button>
             </div>
-          </div>
+          </form>
         </div>
       )}
     </div>

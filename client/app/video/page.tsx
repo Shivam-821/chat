@@ -183,9 +183,21 @@ const VideoPage = () => {
                       })}
                     </p>
                   </div>
-                  <div className="bg-lime-300 dark:bg-teal-500 px-3 py-1.5 rounded-xl border-2 border-black dark:border-white font-black text-sm text-black dark:text-white flex text-center items-center justify-center shadow-[2px_2px_0_0_#000] dark:shadow-[2px_2px_0_0_#fff] min-w-[70px]">
-                    {duration}
-                  </div>
+                  {item.isEnded ? (
+                    <div className="bg-lime-300 dark:bg-teal-500 px-3 py-1.5 rounded-xl border-2 border-black dark:border-white font-black text-sm text-black dark:text-white flex text-center items-center justify-center shadow-[2px_2px_0_0_#000] dark:shadow-[2px_2px_0_0_#fff] min-w-[70px]">
+                      {duration}
+                    </div>
+                  ) : (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        router.push(`/video/${item.roomID}`);
+                      }}
+                      className="cursor-pointer bg-pink-400 dark:bg-rose-500 hover:scale-105 active:scale-95 transition-all px-4 py-1.5 rounded-xl border-2 border-black dark:border-white font-black text-sm text-black dark:text-white flex text-center items-center justify-center shadow-[2px_2px_0_0_#000] dark:shadow-[2px_2px_0_0_#fff] min-w-[70px]"
+                    >
+                      Resume
+                    </button>
+                  )}
                 </div>
               );
             })}
