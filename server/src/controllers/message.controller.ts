@@ -7,7 +7,8 @@ import { IndividualMessageModel } from "../models/individual.model";
 import { GroupModel } from "../models/group.model";
 import type { AuthRequest } from "../middlewares/auth.middleware";
 import mongoose from "mongoose";
-import "../models/poll.model"; // ensure Poll schema is registered for populate
+import "../models/poll.model";
+import bcrypt from "bcrypt";
 
 const PAGE_SIZE = 25;
 
@@ -119,6 +120,12 @@ export const getIndividualMessages = asyncHandler(
     // Return in ascending order so UI renders oldest → newest
     messages.reverse();
 
+    // Check if secure chat is enabled for the current user
+    const isSecureCurrent =
+      chat.secureChat?.some(
+        (item) => item.user.toString() === user._id.toString(),
+      ) || false;
+
     return res.status(200).json(
       new ApiResponse(
         200,
@@ -127,6 +134,7 @@ export const getIndividualMessages = asyncHandler(
           hasMore: page * PAGE_SIZE < total,
           page,
           pinnedMessage: (chat as any).pinnedMessage ?? null,
+          isSecureCurrent,
         },
         "Messages fetched",
       ),
@@ -188,5 +196,99 @@ export const getGroupMessages = asyncHandler(
         "Group messages fetched",
       ),
     );
+  },
+);
+
+// secure chat controller
+export const setSecureChat = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const user = req.user;
+    if (!user) return res.status(401).json(new ApiError(401, "Unauthorized"));
+
+    const { user1Id, user2Id, password } = req.body;
+    const chat = await IndividualMessageModel.findOne({
+      $or: [
+        { user1: user1Id, user2: user2Id },
+        { user1: user2Id, user2: user1Id },
+      ],
+    });
+
+    if (!chat) return res.status(404).json(new ApiError(404, "Chat not found"));
+
+    const bcryptPassword = await bcrypt.hash(password, 10);
+
+    // check if it's already secured
+    if (chat.secureChat?.some((item) => item.user.toString() === user1Id)) {
+      return res
+        .status(400)
+        .json(new ApiError(400, "Secure chat already enabled"));
+    }
+
+    chat.secureChat?.push({ user: user._id as any, password: bcryptPassword });
+
+    await chat.save();
+
+    return res.status(200).json(new ApiResponse(200, chat, "Secure chat set"));
+  },
+);
+
+export const verifySecureChat = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const user = req.user;
+    if (!user) return res.status(401).json(new ApiError(401, "Unauthorized"));
+
+    const { user1Id, user2Id, password } = req.body;
+    const chat = await IndividualMessageModel.findOne({
+      $or: [
+        { user1: user1Id, user2: user2Id },
+        { user1: user2Id, user2: user1Id },
+      ],
+    });
+
+    if (!chat) return res.status(404).json(new ApiError(404, "Chat not found"));
+
+    let isVerified = false;
+    if (chat.secureChat) {
+      for (const item of chat.secureChat) {
+        if (item.user.toString() === user1Id) {
+          isVerified = await bcrypt.compare(password, item.password);
+          break;
+        }
+      }
+    }
+
+    if (!isVerified)
+      return res.status(401).json(new ApiError(401, "Unauthorized"));
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, { isVerified, chat }, "Secure chat verified"));
+  },
+);
+
+export const removeSecureChat = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const user = req.user;
+    if (!user) return res.status(401).json(new ApiError(401, "Unauthorized"));
+
+    const { user1Id, user2Id } = req.body;
+    const chat = await IndividualMessageModel.findOne({
+      $or: [
+        { user1: user1Id, user2: user2Id },
+        { user1: user2Id, user2: user1Id },
+      ],
+    });
+
+    if (!chat) return res.status(404).json(new ApiError(404, "Chat not found"));
+
+    chat.secureChat = chat.secureChat?.filter(
+      (item) => item.user.toString() !== user1Id,
+    );
+
+    await chat.save();
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, chat, "Secure chat removed"));
   },
 );
