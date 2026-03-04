@@ -184,10 +184,7 @@ export const getCallHistory = asyncHandler(
     }
 
     const history = await VideoModel.find({
-      $and: [
-        { $or: [{ host: user._id }, { guest: user._id }] },
-        { isEnded: true },
-      ],
+      $or: [{ host: user._id }, { guest: user._id }],
     })
       .populate("host", "name avatar")
       .populate("guest", "name avatar")

@@ -618,6 +618,14 @@ export const initSocketListeners = (io: Server) => {
       },
     );
 
+    // 7. Incoming Chat Messages
+    socket.on(
+      "video-chat-message",
+      (data: { roomId: string; message: any }) => {
+        socket.to(data.roomId).emit("video-chat-message", data.message);
+      },
+    );
+
     // --------- VIDEO CALL SOCKET ENDS ----------
 
     // DISCONNECT
