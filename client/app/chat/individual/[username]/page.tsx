@@ -9,6 +9,7 @@ import {
   FaPaperclip,
   FaPaperPlane,
   FaSmile,
+  FaLock,
 } from "react-icons/fa";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -17,6 +18,7 @@ import {
   getKeysApi,
   ChatMessage,
   PinnedMessageInfo,
+  verifySecureChatApi,
 } from "@/api/api";
 import { useSocket } from "@/context/SocketContext";
 import { useE2E } from "@/context/E2EContext";
@@ -50,6 +52,10 @@ const IndividualChatPage = ({ params }: PageProps) => {
     null,
   );
   const pinnedHighlightTimer = React.useRef<NodeJS.Timeout | null>(null);
+
+  const [isSecureLocked, setIsSecureLocked] = useState(false);
+  const [securePassword, setSecurePassword] = useState("");
+  const [verifyingSecure, setVerifyingSecure] = useState(false);
 
   const { encryptMsg, decryptMsg, isE2EReady } = useE2E();
 
@@ -125,6 +131,13 @@ const IndividualChatPage = ({ params }: PageProps) => {
         token,
       );
       if (res) {
+        if (
+          res.isSecureCurrent &&
+          sessionStorage.getItem(`secure_verified_${contact._id}`) !== "true"
+        ) {
+          setIsSecureLocked(true);
+        }
+
         const processed = await processMessages(res.messages);
         setMessages(processed);
         setHasMore(res.hasMore);
@@ -403,6 +416,65 @@ const IndividualChatPage = ({ params }: PageProps) => {
     );
   }
 
+  const handleVerifySecure = async () => {
+    if (!securePassword) return;
+    if (!user?._id || !contact?._id || !token) return;
+    setVerifyingSecure(true);
+    const res = await verifySecureChatApi(
+      user._id,
+      contact._id,
+      securePassword,
+      token,
+    );
+    if (res?.isVerified) {
+      sessionStorage.setItem(`secure_verified_${contact._id}`, "true");
+      setIsSecureLocked(false);
+      setSecurePassword("");
+    } else {
+      setSecurePassword("");
+    }
+    setVerifyingSecure(false);
+  };
+
+  if (isSecureLocked) {
+    return (
+      <div className="flex flex-col h-full bg-lime-50 dark:bg-neutral-950 w-full items-center justify-center p-6">
+        <div className="bg-white dark:bg-neutral-900 rounded-2xl p-8 w-full max-w-md shadow-xl border border-slate-200 dark:border-neutral-800 text-center">
+          <div className="w-16 h-16 bg-lime-100 dark:bg-lime-900/50 rounded-full flex items-center justify-center mx-auto mb-4 text-lime-600 dark:text-lime-400">
+            <FaLock size={28} />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200 mb-2">
+            Secure Chat
+          </h2>
+          <p className="text-slate-500 dark:text-slate-400 mb-6">
+            This chat is protected. Enter your password to view messages.
+          </p>
+          <input
+            type="password"
+            placeholder="Password"
+            value={securePassword}
+            onChange={(e) => setSecurePassword(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleVerifySecure()}
+            className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-lime-500 mb-4 text-center text-lg"
+          />
+          <button
+            onClick={handleVerifySecure}
+            disabled={verifyingSecure || !securePassword}
+            className="w-full py-3 rounded-xl font-bold bg-lime-500 hover:bg-lime-600 text-white transition-colors disabled:opacity-50"
+          >
+            {verifyingSecure ? "Verifying..." : "Unlock"}
+          </button>
+          <button
+            onClick={() => router.back()}
+            className="w-full mt-3 py-3 rounded-xl font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-neutral-800 transition-colors"
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const handleEditMessage = (msg: DisplayMessage) => {
     if (!msg._id) return;
     setInputMessage(msg.message);
@@ -519,6 +591,9 @@ const IndividualChatPage = ({ params }: PageProps) => {
             className="cursor-pointer hover:text-lime-600 dark:hover:text-lime-400 transition-colors hover:scale-110"
           />
           <FaInfoCircle
+            onClick={() =>
+              router.push(`/chat/individual/${decodedUsername}/info`)
+            }
             size={20}
             className="cursor-pointer hover:text-lime-600 dark:hover:text-lime-400 transition-colors hover:scale-110"
           />

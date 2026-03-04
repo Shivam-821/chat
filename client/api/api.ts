@@ -576,6 +576,7 @@ export const getIndividualMessagesApi = async (
   messages: ChatMessage[];
   hasMore: boolean;
   pinnedMessage: PinnedMessageInfo | null;
+  isSecureCurrent?: boolean;
 } | null> => {
   try {
     const res = await axios.get(
@@ -606,6 +607,70 @@ export const getGroupMessagesApi = async (
     return res.data.data;
   } catch (error: any) {
     toast.error(error.response?.data?.message || "Failed to load messages");
+    return null;
+  }
+};
+
+// --- Secure Chat API ---
+export const setSecureChatApi = async (
+  user1Id: string,
+  user2Id: string,
+  password: string,
+  token: string,
+) => {
+  try {
+    const res = await axios.post(
+      `${API_URL}/messages/secure-chat`,
+      { user1Id, user2Id, password },
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+    toast.success("Secure chat enabled!");
+    return res.data.data;
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || "Failed to set secure chat");
+    return null;
+  }
+};
+
+export const verifySecureChatApi = async (
+  user1Id: string,
+  user2Id: string,
+  password: string,
+  token: string,
+) => {
+  try {
+    const res = await axios.post(
+      `${API_URL}/messages/verify-secure-chat`,
+      { user1Id, user2Id, password },
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+    return res.data.data; // { isVerified, chat }
+  } catch (error: any) {
+    if (error.response?.status !== 401) {
+      toast.error(
+        error.response?.data?.message || "Failed to verify secure chat",
+      );
+    }
+    return null;
+  }
+};
+
+export const removeSecureChatApi = async (
+  user1Id: string,
+  user2Id: string,
+  token: string,
+) => {
+  try {
+    const res = await axios.delete(`${API_URL}/messages/remove-secure-chat`, {
+      data: { user1Id, user2Id },
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    toast.success("Secure chat disabled!");
+    return res.data.data;
+  } catch (error: any) {
+    toast.error(
+      error.response?.data?.message || "Failed to remove secure chat",
+    );
     return null;
   }
 };
