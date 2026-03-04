@@ -35,6 +35,14 @@ const VideoCallPage = ({ params }: PageProps) => {
   const socket = useSocket();
   const [videoFramNo, setVideoFramNo] = useState<number>(1);
 
+  // Disable global scrolling while on the video call page
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, []);
+
   const [hasJoined, setHasJoined] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
   const [role, setRole] = useState<"host" | "guest" | null>(null);
@@ -115,6 +123,8 @@ const VideoCallPage = ({ params }: PageProps) => {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
 
+  const cameraTrackRef = useRef<MediaStreamTrack | null>(null);
+
   const roleRef = useRef(role);
   useEffect(() => {
     roleRef.current = role;
@@ -194,6 +204,12 @@ const VideoCallPage = ({ params }: PageProps) => {
           audio: true,
         });
         localStreamRef.current = stream;
+
+        const videoTrack = stream.getVideoTracks()[0];
+        if (videoTrack) {
+          cameraTrackRef.current = videoTrack; // save original camera track
+        }
+
         setLocalStream(stream); // Trigger VideoFrame re-render with the real stream
 
         // Apply initial mute/video off states
@@ -422,6 +438,61 @@ const VideoCallPage = ({ params }: PageProps) => {
     return `${m}:${s}`;
   };
 
+  const handleToggleScreenShare = async () => {
+    const pc = peerConnectionRef.current;
+    if (!pc) return;
+
+    if (!isScreenSharing) {
+      try {
+        // 1. Get screen stream
+        const screenStream = await navigator.mediaDevices.getDisplayMedia({
+          video: true,
+          audio: false,
+        });
+        const screenTrack = screenStream.getVideoTracks()[0];
+
+        // 2. Find the video sender in the PeerConnection and replace its track
+        const sender = pc.getSenders().find((s) => s.track?.kind === "video");
+        if (sender) await sender.replaceTrack(screenTrack);
+
+        // 3. Update local preview stream (so your own UI shows screen)
+        const newLocalStream = new MediaStream([
+          screenTrack,
+          ...(localStreamRef.current?.getAudioTracks() || []),
+        ]);
+        setLocalStream(newLocalStream);
+
+        // 4. When user clicks "Stop sharing" from the browser's built-in bar
+        screenTrack.onended = () => stopScreenShare();
+
+        setIsScreenSharing(true);
+      } catch (err) {
+        console.error("Screen share error:", err);
+        // user cancelled the picker — no state change needed
+      }
+    } else {
+      stopScreenShare();
+    }
+  };
+
+  const stopScreenShare = async () => {
+    const pc = peerConnectionRef.current;
+    const cameraTrack = cameraTrackRef.current;
+    if (!pc || !cameraTrack) return;
+
+    // Restore the camera track in the PeerConnection
+    const sender = pc.getSenders().find((s) => s.track?.kind === "video");
+    if (sender) await sender.replaceTrack(cameraTrack);
+
+    // Restore local preview
+    const restoredStream = new MediaStream([
+      cameraTrack,
+      ...(localStreamRef.current?.getAudioTracks() || []),
+    ]);
+    setLocalStream(restoredStream);
+    setIsScreenSharing(false);
+  };
+
   // Toggle Fullscreen using standard Web API
   const toggleFullScreen = () => {
     if (!document.fullscreenElement) {
@@ -445,7 +516,7 @@ const VideoCallPage = ({ params }: PageProps) => {
 
   if (!hasJoined) {
     return (
-      <div className="h-[90vh] w-screen bg-white dark:bg-neutral-950 flex flex-col md:flex-row items-center justify-center p-8 gap-8">
+      <div className="h-[screen w-screen bg-white dark:bg-neutral-950 flex flex-col md:flex-row items-center justify-center p-8 gap-8">
         {/* Local Preview */}
         <div className="w-full max-w-2xl aspect-video bg-neutral-900 rounded-2xl overflow-hidden relative shadow-lg ring-1 ring-neutral-200 dark:ring-neutral-800">
           {isVideoOff ? (
@@ -516,7 +587,7 @@ const VideoCallPage = ({ params }: PageProps) => {
   return (
     <div
       ref={containerRef}
-      className="h-[90vh] w-screen relative bg-[#f5ffdf] dark:bg-neutral-950 overflow-hidden flex flex-col"
+      className="h-[calc(100vh-64px)] w-screen relative bg-[#f5ffdf] dark:bg-neutral-950 overflow-hidden flex flex-col"
     >
       <div
         ref={badgeRef}
@@ -536,7 +607,7 @@ const VideoCallPage = ({ params }: PageProps) => {
       </div>
 
       {/* Video Frames */}
-      <div className="flex-1 w-full h-full relative">
+      <div className="flex-1 w-full h-full relative flex flex-col min-h-0">
         {videoFramNo === 1 ? (
           <VideoFrame1
             isCameraOn={!isVideoOff}
@@ -594,7 +665,7 @@ const VideoCallPage = ({ params }: PageProps) => {
           </button>
 
           <button
-            onClick={() => setIsScreenSharing(!isScreenSharing)}
+            onClick={handleToggleScreenShare}
             title={
               isScreenSharing
                 ? "Stop Screen Presentation"

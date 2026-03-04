@@ -9,8 +9,8 @@ import { FaXTwitter } from "react-icons/fa6";
 const Footer = () => {
   const pathname = usePathname();
 
-  // Hide the footer entirely on chat pages so it doesn't squish the layout on mobile
-  if (pathname.startsWith("/chat")) {
+  // Hide the footer entirely on chat pages and video calls so it doesn't squish the layout
+  if (pathname.startsWith("/chat") || pathname.startsWith("/video")) {
     return null;
   }
 

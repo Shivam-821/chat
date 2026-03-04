@@ -128,9 +128,10 @@ export const VideoFrame2 = ({
   localStream?: MediaStream | null;
   remoteStream?: MediaStream | null;
 }) => {
-  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [position, setPosition] = useState({ x: 20, y: 20 });
   const isDragging = useRef(false);
   const startPos = useRef({ x: 0, y: 0 });
+  const hasInitialized = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const draggableRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -193,16 +194,54 @@ export const VideoFrame2 = ({
     e.currentTarget.releasePointerCapture(e.pointerId);
   };
 
-  // Set initial position to top-right
+  // Set initial position and handle window resize to prevent the controller from getting lost
   useEffect(() => {
-    if (containerRef.current && draggableRef.current) {
-      const containerRect = containerRef.current.getBoundingClientRect();
-      const draggableRect = draggableRef.current.getBoundingClientRect();
-      setPosition({
-        x: containerRect.width - draggableRect.width - 16, // 16px right margin
-        y: 16, // 16px top margin
-      });
-    }
+    const clampPosition = () => {
+      if (containerRef.current && draggableRef.current) {
+        const containerRect = containerRef.current.getBoundingClientRect();
+        const draggableRect = draggableRef.current.getBoundingClientRect();
+
+        if (containerRect.width === 0 || draggableRect.width === 0) return;
+
+        const maxX = containerRect.width - draggableRect.width;
+        const maxY = containerRect.height - draggableRect.height;
+
+        setPosition((prev) => {
+          let newX = prev.x;
+          let newY = prev.y;
+
+          // Initial position placement
+          if (!hasInitialized.current) {
+            hasInitialized.current = true;
+            return {
+              x: Math.max(0, maxX - 16), // 16px right margin
+              y: Math.max(0, 16), // 16px top margin
+            };
+          }
+
+          // Clamp bounds if window resized
+          if (newX > maxX) newX = maxX;
+          if (newY > maxY) newY = maxY;
+          if (newX < 0) newX = 0;
+          if (newY < 0) newY = 0;
+
+          if (newX !== prev.x || newY !== prev.y) {
+            return { x: newX, y: newY };
+          }
+          return prev;
+        });
+      }
+    };
+
+    clampPosition();
+    // Fallback for slower layouts on mount
+    const timeoutId = setTimeout(clampPosition, 100);
+    window.addEventListener("resize", clampPosition);
+
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener("resize", clampPosition);
+    };
   }, []);
 
   return (
@@ -245,7 +284,7 @@ export const VideoFrame2 = ({
       </div>
       <div
         ref={draggableRef}
-        className="h-[24%] min-h-[120px] w-[18%] min-w-[160px] border absolute z-20 bg-[#c4e277] dark:bg-neutral-600 border-neutral-200 dark:border-neutral-700 rounded-lg cursor-grab active:cursor-grabbing touch-none shadow-lg flex items-center justify-center overflow-hidden"
+        className="h-[24%] min-h-[120px] w-[18%] min-w-[160px] border absolute z-50 bg-[#c4e277] dark:bg-neutral-600 border-neutral-200 dark:border-neutral-700 rounded-lg cursor-grab active:cursor-grabbing touch-none shadow-lg flex items-center justify-center overflow-hidden"
         style={{
           transform: `translate(${position.x}px, ${position.y}px)`,
           top: 0,
@@ -262,7 +301,7 @@ export const VideoFrame2 = ({
             autoPlay
             playsInline
             muted
-            className="h-full w-full object-cover pointer-events-none"
+            className="h-full w-full object-cover"
           />
         ) : (
           <div className="flex flex-col justify-center items-center gap-1">
