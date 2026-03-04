@@ -174,3 +174,28 @@ export const endVideoCall = asyncHandler(
       );
   },
 );
+
+// get call history for the current user
+export const getCallHistory = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const user = req.user;
+    if (!user) {
+      return res.status(401).json(new ApiError(401, "Unauthorized"));
+    }
+
+    const history = await VideoModel.find({
+      $and: [
+        { $or: [{ host: user._id }, { guest: user._id }] },
+        { isEnded: true },
+      ],
+    })
+      .populate("host", "name avatar")
+      .populate("guest", "name avatar")
+      .sort({ startedAt: -1 })
+      .limit(20);
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, { history }, "Call history fetched"));
+  },
+);

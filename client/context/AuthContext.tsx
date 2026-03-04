@@ -87,6 +87,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = () => {
     localStorage.removeItem("chat_token");
     localStorage.removeItem("chat_user");
+    localStorage.removeItem("e2e_private_key");
+    localStorage.removeItem("e2e_public_key");
     Cookies.remove("chat_token", { path: "/" });
     setToken(null);
     setUser(null);

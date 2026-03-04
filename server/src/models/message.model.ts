@@ -12,6 +12,7 @@ export interface IMessage extends Document {
   reactions: { user: Types.ObjectId; reaction: string }[];
   read?: boolean;
   replyOn?: Types.ObjectId | any;
+  poll?: Types.ObjectId;
 }
 
 const messageSchema = new Schema<IMessage>(
@@ -67,6 +68,10 @@ const messageSchema = new Schema<IMessage>(
     replyOn: {
       type: Schema.Types.ObjectId,
       ref: "Message",
+    },
+    poll: {
+      type: Schema.Types.ObjectId,
+      ref: "Poll",
     },
   },
   {

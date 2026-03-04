@@ -16,6 +16,7 @@ import {
   getIndividualMessagesApi,
   getKeysApi,
   ChatMessage,
+  PinnedMessageInfo,
 } from "@/api/api";
 import { useSocket } from "@/context/SocketContext";
 import { useE2E } from "@/context/E2EContext";
@@ -45,6 +46,10 @@ const IndividualChatPage = ({ params }: PageProps) => {
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [replyingToMessage, setReplyingToMessage] =
     useState<DisplayMessage | null>(null);
+  const [pinnedMessage, setPinnedMessage] = useState<PinnedMessageInfo | null>(
+    null,
+  );
+  const pinnedHighlightTimer = React.useRef<NodeJS.Timeout | null>(null);
 
   const { encryptMsg, decryptMsg, isE2EReady } = useE2E();
 
@@ -124,6 +129,15 @@ const IndividualChatPage = ({ params }: PageProps) => {
         setMessages(processed);
         setHasMore(res.hasMore);
         setPage(1);
+        if (res.pinnedMessage) {
+          const decryptedPinnedText = await decryptPayload(
+            res.pinnedMessage.message,
+          );
+          setPinnedMessage({
+            ...res.pinnedMessage,
+            message: decryptedPinnedText,
+          });
+        }
       }
       setIsInitializing(false);
     };
@@ -214,6 +228,25 @@ const IndividualChatPage = ({ params }: PageProps) => {
       );
     };
 
+    const pinnedHandler = (data: {
+      messageId: string;
+      pinnedPersonName?: string;
+    }) => {
+      setMessages((prev) => {
+        const found = prev.find((m) => m._id === data.messageId);
+        if (found) {
+          setPinnedMessage({
+            _id: data.messageId,
+            message: found.message,
+            sender: { name: data.pinnedPersonName || "Someone" },
+          });
+        }
+        return prev;
+      });
+    };
+
+    const unpinnedHandler = () => setPinnedMessage(null);
+
     const typingHandler = (data: { senderId: string }) => {
       if (data.senderId === contact?._id) {
         setTypingUser(data.senderId);
@@ -229,6 +262,8 @@ const IndividualChatPage = ({ params }: PageProps) => {
     socket.on("message-deleted", deleteHandler);
     socket.on("message-sent-success", successHandler);
     socket.on("message-reacted", reactionHandler);
+    socket.on("message-pinned", pinnedHandler);
+    socket.on("message-unpinned", unpinnedHandler);
     socket.on("typing", typingHandler);
 
     return () => {
@@ -237,6 +272,8 @@ const IndividualChatPage = ({ params }: PageProps) => {
       socket.off("message-deleted", deleteHandler);
       socket.off("message-sent-success", successHandler);
       socket.off("message-reacted", reactionHandler);
+      socket.off("message-pinned", pinnedHandler);
+      socket.off("message-unpinned", unpinnedHandler);
       socket.off("typing", typingHandler);
     };
   }, [socket, decryptPayload, contact?._id]);
@@ -404,6 +441,38 @@ const IndividualChatPage = ({ params }: PageProps) => {
     });
   };
 
+  const handlePinMessage = (msg: DisplayMessage) => {
+    if (!msg._id || !user?._id || !contact?._id) return;
+    const roomId = [user._id, contact._id].sort().join("_");
+    socket.emit("pin-message", {
+      roomId,
+      messageId: msg._id,
+      pinnedPersonName: user.name,
+    });
+  };
+
+  const scrollToPinnedMessage = () => {
+    if (!pinnedMessage) return;
+    const el = document.querySelector(
+      `[data-message-id="${pinnedMessage._id}"]`,
+    ) as HTMLElement | null;
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.add("pinned-highlight");
+      if (pinnedHighlightTimer.current)
+        clearTimeout(pinnedHighlightTimer.current);
+      pinnedHighlightTimer.current = setTimeout(() => {
+        el.classList.remove("pinned-highlight");
+      }, 400);
+    }
+  };
+
+  const handleUnpinMessage = () => {
+    if (!user?._id || !contact?._id) return;
+    const roomId = [user._id, contact._id].sort().join("_");
+    socket.emit("unpin-message", { roomId });
+  };
+
   return (
     <div className="flex flex-col h-full bg-lime-50 dark:bg-neutral-950 w-full relative overflow-hidden">
       {/* Chat Header */}
@@ -456,6 +525,36 @@ const IndividualChatPage = ({ params }: PageProps) => {
         </div>
       </div>
 
+      {/* Pinned Message Banner */}
+      {pinnedMessage && (
+        <div className="shrink-0 w-full flex items-center gap-3 px-5 py-2 bg-lime-100/80 dark:bg-lime-950/40 border-b border-lime-200 dark:border-lime-900">
+          <button
+            onClick={scrollToPinnedMessage}
+            className="flex items-center gap-3 flex-1 min-w-0 text-left group hover:opacity-80 transition-opacity"
+          >
+            <span className="text-lg shrink-0">📌</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] font-semibold text-lime-700 dark:text-lime-400 uppercase tracking-wide">
+                Pinned by {pinnedMessage.sender.name}
+              </p>
+              <p className="text-xs text-slate-600 dark:text-slate-300 truncate">
+                {pinnedMessage.message}
+              </p>
+            </div>
+            <span className="text-slate-400 dark:text-slate-600 group-hover:text-lime-600 dark:group-hover:text-lime-400 transition-colors text-xs shrink-0 mr-2">
+              ↗
+            </span>
+          </button>
+          <button
+            onClick={handleUnpinMessage}
+            title="Unpin message"
+            className="shrink-0 text-slate-400 hover:text-rose-500 dark:text-slate-600 dark:hover:text-rose-400 transition-colors text-lg leading-none"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Isolated scrollable messages */}
       <div className="flex-1 overflow-hidden relative">
         <div className="absolute inset-0 flex flex-col">
@@ -471,6 +570,7 @@ const IndividualChatPage = ({ params }: PageProps) => {
             onDeleteMessage={handleDeleteMessage}
             onReplyMessage={handleReplyMessage}
             onReactMessage={handleReactMessage}
+            onPinMessage={handlePinMessage}
           />
         </div>
       </div>

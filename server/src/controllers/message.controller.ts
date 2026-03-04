@@ -7,6 +7,7 @@ import { IndividualMessageModel } from "../models/individual.model";
 import { GroupModel } from "../models/group.model";
 import type { AuthRequest } from "../middlewares/auth.middleware";
 import mongoose from "mongoose";
+import "../models/poll.model"; // ensure Poll schema is registered for populate
 
 const PAGE_SIZE = 25;
 
@@ -83,6 +84,10 @@ export const getIndividualMessages = asyncHandler(
         { user1: user1Id, user2: user2Id },
         { user1: user2Id, user2: user1Id },
       ],
+    }).populate({
+      path: "pinnedMessage",
+      select: "message sender",
+      populate: { path: "sender", select: "name" },
     });
 
     if (!chat) {
@@ -91,7 +96,7 @@ export const getIndividualMessages = asyncHandler(
         .json(
           new ApiResponse(
             200,
-            { messages: [], hasMore: false },
+            { messages: [], hasMore: false, pinnedMessage: null },
             "No messages yet",
           ),
         );
@@ -121,6 +126,7 @@ export const getIndividualMessages = asyncHandler(
           messages,
           hasMore: page * PAGE_SIZE < total,
           page,
+          pinnedMessage: (chat as any).pinnedMessage ?? null,
         },
         "Messages fetched",
       ),
@@ -135,6 +141,14 @@ export const getGroupMessages = asyncHandler(
 
     const { groupId } = req.params;
     const page = Math.max(1, parseInt(req.query.page as string) || 1);
+
+    const group = await GroupModel.findById(groupId)
+      .select("pinnedMessage")
+      .populate({
+        path: "pinnedMessage",
+        select: "message sender",
+        populate: { path: "sender", select: "name" },
+      });
 
     const total = await MessageModel.countDocuments({
       chatId: groupId,
@@ -154,6 +168,10 @@ export const getGroupMessages = asyncHandler(
         select: "message sender",
         populate: { path: "sender", select: "name" },
       })
+      .populate({
+        path: "poll",
+        select: "question allowMultiple options",
+      })
       .lean();
 
     messages.reverse();
@@ -165,6 +183,7 @@ export const getGroupMessages = asyncHandler(
           messages,
           hasMore: page * PAGE_SIZE < total,
           page,
+          pinnedMessage: group?.pinnedMessage ?? null,
         },
         "Group messages fetched",
       ),

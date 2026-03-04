@@ -5,6 +5,7 @@ export interface IGroup extends Document {
   admin: Types.ObjectId;
   members: [Types.ObjectId];
   lastMessage?: Types.ObjectId;
+  pinnedMessage?: Types.ObjectId;
 }
 
 const groupSchema = new Schema<IGroup>(
@@ -28,6 +29,10 @@ const groupSchema = new Schema<IGroup>(
       type: Schema.Types.ObjectId,
       ref: "Message",
     },
+    pinnedMessage: {
+      type: Schema.Types.ObjectId,
+      ref: "Message",
+    }
   },
   {
     timestamps: true,

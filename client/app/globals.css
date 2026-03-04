@@ -123,3 +123,20 @@
   animation: slideUpFade 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
   opacity: 0; /* Prevents visual flash before animation starts */
 }
+
+@keyframes pinnedPulse {
+  0% {
+    background-color: transparent;
+  }
+  30% {
+    background-color: rgba(250, 204, 21, 0.35);
+  } /* amber-400 at 35% */
+  100% {
+    background-color: transparent;
+  }
+}
+
+.pinned-highlight {
+  animation: pinnedPulse 1.8s ease-out forwards;
+  border-radius: 12px;
+}

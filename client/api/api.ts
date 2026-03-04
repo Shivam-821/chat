@@ -541,6 +541,30 @@ export interface ChatMessage {
   deleted?: boolean;
   reactions?: { user: string; reaction: string }[];
   replyOn?: { _id: string; message: string; sender: { name: string } };
+  poll?: {
+    _id: string;
+    question: string;
+    allowMultiple: boolean;
+    options: { text: string; votes: string[] }[];
+  };
+}
+
+export interface PinnedMessageInfo {
+  _id: string;
+  message: string;
+  sender: { _id?: string; name: string };
+}
+
+export interface PollOption {
+  text: string;
+  votes: string[]; // array of voter user IDs
+}
+
+export interface PollData {
+  _id: string;
+  question: string;
+  allowMultiple: boolean;
+  options: PollOption[];
 }
 
 export const getIndividualMessagesApi = async (
@@ -548,7 +572,11 @@ export const getIndividualMessagesApi = async (
   user2Id: string,
   page: number,
   token: string,
-): Promise<{ messages: ChatMessage[]; hasMore: boolean } | null> => {
+): Promise<{
+  messages: ChatMessage[];
+  hasMore: boolean;
+  pinnedMessage: PinnedMessageInfo | null;
+} | null> => {
   try {
     const res = await axios.get(
       `${API_URL}/messages/individual/${user1Id}/${user2Id}?page=${page}`,
@@ -565,7 +593,11 @@ export const getGroupMessagesApi = async (
   groupId: string,
   page: number,
   token: string,
-): Promise<{ messages: ChatMessage[]; hasMore: boolean } | null> => {
+): Promise<{
+  messages: ChatMessage[];
+  hasMore: boolean;
+  pinnedMessage: PinnedMessageInfo | null;
+} | null> => {
   try {
     const res = await axios.get(
       `${API_URL}/messages/group/${groupId}?page=${page}`,
@@ -655,6 +687,28 @@ export const endVideoCallApi = async (token: string, roomCode: string) => {
     return res.data;
   } catch (error: any) {
     toast.error(error.response?.data?.message || "Failed to end call");
+    return null;
+  }
+};
+
+export const getCallHistoryApi = async (token: string) => {
+  try {
+    const res = await axios.get(`${API_URL}/video-call/history`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return res.data.data.history as {
+      _id: string;
+      host: { _id: string; name: string; avatar?: string };
+      guest?: { _id: string; name: string; avatar?: string };
+      roomID: string;
+      startedAt: string;
+      endedAt?: string;
+      isEnded: boolean;
+    }[];
+  } catch (error: any) {
+    toast.error(
+      error.response?.data?.message || "Failed to fetch call history",
+    );
     return null;
   }
 };

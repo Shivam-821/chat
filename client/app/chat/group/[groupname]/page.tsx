@@ -10,11 +10,19 @@ import {
   FaPaperclip,
   FaPaperPlane,
   FaSmile,
+  FaPoll,
 } from "react-icons/fa";
 import { useAuth } from "@/context/AuthContext";
 import { useSocket } from "@/context/SocketContext";
-import { getGroupByNameApi, getGroupMessagesApi, ChatMessage } from "@/api/api";
+import {
+  getGroupByNameApi,
+  getGroupMessagesApi,
+  ChatMessage,
+  PinnedMessageInfo,
+  PollData,
+} from "@/api/api";
 import ChatMessages, { DisplayMessage } from "@/components/ChatMessages";
+import toast from "react-hot-toast";
 
 interface PageProps {
   params: Promise<{ groupname: string }>;
@@ -50,6 +58,17 @@ const GroupChatPage = ({ params }: PageProps) => {
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [replyingToMessage, setReplyingToMessage] =
     useState<DisplayMessage | null>(null);
+  const [pinnedMessage, setPinnedMessage] = useState<PinnedMessageInfo | null>(
+    null,
+  );
+  const pinnedHighlightTimer = React.useRef<NodeJS.Timeout | null>(null);
+
+  // Poll creation dialog state
+  const [showPollDialog, setShowPollDialog] = useState(false);
+  const [pollQuestion, setPollQuestion] = useState("");
+  const [pollOptions, setPollOptions] = useState(["", ""]);
+  const [pollAllowMultiple, setPollAllowMultiple] = useState(false);
+  const [isCreatingPoll, setIsCreatingPoll] = useState(false);
 
   // Fetch group
   useEffect(() => {
@@ -77,6 +96,7 @@ const GroupChatPage = ({ params }: PageProps) => {
         setMessages(res.messages.map(toDisplay));
         setHasMore(res.hasMore);
         setPage(1);
+        if (res.pinnedMessage) setPinnedMessage(res.pinnedMessage);
       }
       setIsInitializing(false);
     };
@@ -164,6 +184,25 @@ const GroupChatPage = ({ params }: PageProps) => {
       );
     };
 
+    const pinnedHandler = (data: {
+      messageId: string;
+      pinnedPersonName?: string;
+    }) => {
+      setMessages((prev) => {
+        const found = prev.find((m) => m._id === data.messageId);
+        if (found) {
+          setPinnedMessage({
+            _id: data.messageId,
+            message: found.message,
+            sender: { name: data.pinnedPersonName || "Someone" },
+          });
+        }
+        return prev;
+      });
+    };
+
+    const unpinnedHandler = () => setPinnedMessage(null);
+
     const typingHandler = (data: {
       senderId: string;
       senderName: string;
@@ -178,12 +217,66 @@ const GroupChatPage = ({ params }: PageProps) => {
       }
     };
 
+    // Poll listeners
+    const pollReceiveHandler = (data: {
+      _id: string;
+      tempId?: string;
+      senderId: string;
+      senderName: string;
+      senderAvatar?: string;
+      createdAt?: string;
+      poll: PollData;
+    }) => {
+      setMessages((prev) => {
+        // Replace optimistic message if tempId matches, otherwise append
+        if (data.tempId) {
+          const exists = prev.find((m) => m._id === data.tempId);
+          if (exists) {
+            return prev.map((m) =>
+              m._id === data.tempId
+                ? { ...m, _id: data._id, poll: data.poll }
+                : m,
+            );
+          }
+        }
+        return [
+          ...prev,
+          {
+            _id: data._id,
+            senderId: data.senderId,
+            senderName: data.senderName,
+            senderAvatar: data.senderAvatar,
+            message: "",
+            createdAt: data.createdAt || new Date().toISOString(),
+            poll: data.poll,
+          },
+        ];
+      });
+    };
+
+    const pollUpdatedHandler = (data: {
+      pollId: string;
+      options: { text: string; votes: string[] }[];
+    }) => {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.poll && m.poll._id === data.pollId
+            ? { ...m, poll: { ...m.poll, options: data.options } }
+            : m,
+        ),
+      );
+    };
+
     socket.on("receive-group-message", handler);
     socket.on("message-edited", editHandler);
     socket.on("message-deleted", deleteHandler);
     socket.on("message-sent-success", successHandler);
     socket.on("message-reacted", reactionHandler);
+    socket.on("message-pinned", pinnedHandler);
+    socket.on("message-unpinned", unpinnedHandler);
     socket.on("group-typing", typingHandler);
+    socket.on("receive-group-poll", pollReceiveHandler);
+    socket.on("poll-updated", pollUpdatedHandler);
 
     return () => {
       socket.off("receive-group-message", handler);
@@ -191,7 +284,11 @@ const GroupChatPage = ({ params }: PageProps) => {
       socket.off("message-deleted", deleteHandler);
       socket.off("message-sent-success", successHandler);
       socket.off("message-reacted", reactionHandler);
+      socket.off("message-pinned", pinnedHandler);
+      socket.off("message-unpinned", unpinnedHandler);
       socket.off("group-typing", typingHandler);
+      socket.off("receive-group-poll", pollReceiveHandler);
+      socket.off("poll-updated", pollUpdatedHandler);
     };
   }, [socket, group?._id, user?._id]);
 
@@ -304,8 +401,97 @@ const GroupChatPage = ({ params }: PageProps) => {
     });
   };
 
+  const handlePinMessage = (msg: DisplayMessage) => {
+    if (!msg._id || !group?._id || !user?._id) return;
+    socket.emit("pin-message", {
+      roomId: group._id, // not used for groups, but required by socket type
+      messageId: msg._id,
+      groupId: group._id,
+      pinnedPersonName: user.name,
+    });
+  };
+
+  const scrollToPinnedMessage = () => {
+    if (!pinnedMessage) return;
+    const el = document.querySelector(
+      `[data-message-id="${pinnedMessage._id}"]`,
+    ) as HTMLElement | null;
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.add("pinned-highlight");
+      if (pinnedHighlightTimer.current)
+        clearTimeout(pinnedHighlightTimer.current);
+      pinnedHighlightTimer.current = setTimeout(() => {
+        el.classList.remove("pinned-highlight");
+      }, 1200);
+    }
+  };
+
+  const handleUnpinMessage = () => {
+    if (!group?._id) return;
+    socket.emit("unpin-message", { roomId: group._id, groupId: group._id });
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") sendMessage();
+  };
+
+  const handleVotePoll = (msg: DisplayMessage, optionIndex: number) => {
+    if (!msg.poll || !group?._id) return;
+    socket.emit("vote-poll", {
+      pollId: msg.poll._id,
+      groupId: group._id,
+      optionIndex,
+    });
+  };
+
+  const handleCreatePoll = () => {
+    if (!user?._id || !group?._id) return;
+    const validOptions = pollOptions.filter((o) => o.trim().length > 0);
+    if (!pollQuestion.trim()) {
+      toast.error("Please enter a question");
+      return;
+    }
+    if (validOptions.length < 2) {
+      toast.error("Please add at least 2 options");
+      return;
+    }
+    setIsCreatingPoll(true);
+    const tempId = Date.now().toString();
+    socket.emit("send-poll", {
+      groupId: group._id,
+      senderId: user._id,
+      senderName: user.name,
+      senderAvatar: user.avatar,
+      question: pollQuestion.trim(),
+      options: validOptions,
+      allowMultiple: pollAllowMultiple,
+      tempId,
+    });
+    // Optimistic add
+    setMessages((prev) => [
+      ...prev,
+      {
+        _id: tempId,
+        senderId: user._id,
+        senderName: user.name,
+        senderAvatar: user.avatar,
+        message: "",
+        createdAt: new Date().toISOString(),
+        poll: {
+          _id: tempId,
+          question: pollQuestion.trim(),
+          allowMultiple: pollAllowMultiple,
+          options: validOptions.map((text) => ({ text, votes: [] })),
+        },
+      },
+    ]);
+    // Reset dialog
+    setPollQuestion("");
+    setPollOptions(["", ""]);
+    setPollAllowMultiple(false);
+    setShowPollDialog(false);
+    setIsCreatingPoll(false);
   };
 
   if (isInitializing) {
@@ -343,14 +529,12 @@ const GroupChatPage = ({ params }: PageProps) => {
           </div>
         </div>
         <div className="flex items-center gap-6 text-slate-600 dark:text-slate-400">
-          <FaPhoneAlt
-            size={18}
-            className="cursor-pointer hover:text-amber-600 dark:hover:text-amber-400 transition-colors hover:scale-110"
-          />
-          <FaVideo
+          <FaPoll
+            onClick={() => setShowPollDialog(true)}
             size={20}
             className="cursor-pointer hover:text-amber-600 dark:hover:text-amber-400 transition-colors hover:scale-110"
           />
+
           <FaInfoCircle
             onClick={() => router.push(`/chat/group/${decodedGroupname}/info`)}
             size={20}
@@ -358,6 +542,36 @@ const GroupChatPage = ({ params }: PageProps) => {
           />
         </div>
       </div>
+
+      {/* Pinned Message Banner */}
+      {pinnedMessage && (
+        <div className="shrink-0 w-full flex items-center gap-3 px-5 py-2 bg-amber-100/80 dark:bg-amber-950/30 border-b border-amber-200 dark:border-amber-900">
+          <button
+            onClick={scrollToPinnedMessage}
+            className="flex items-center gap-3 flex-1 min-w-0 text-left group hover:opacity-80 transition-opacity"
+          >
+            <span className="text-lg shrink-0">📌</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wide">
+                Pinned by {pinnedMessage.sender.name}
+              </p>
+              <p className="text-xs text-slate-600 dark:text-slate-300 truncate">
+                {pinnedMessage.message}
+              </p>
+            </div>
+            <span className="text-slate-400 dark:text-slate-600 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors text-xs shrink-0 mr-2">
+              ↗
+            </span>
+          </button>
+          <button
+            onClick={handleUnpinMessage}
+            title="Unpin message"
+            className="shrink-0 text-slate-400 hover:text-rose-500 dark:text-slate-600 dark:hover:text-rose-400 transition-colors text-lg leading-none"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* Isolated scrollable messages */}
       <div className="flex-1 overflow-hidden relative">
@@ -375,9 +589,130 @@ const GroupChatPage = ({ params }: PageProps) => {
             onDeleteMessage={handleDeleteMessage}
             onReplyMessage={handleReplyMessage}
             onReactMessage={handleReactMessage}
+            onPinMessage={handlePinMessage}
+            onVotePoll={handleVotePoll}
+            groupAdminId={group?.admin}
           />
         </div>
       </div>
+
+      {/* Poll Creation Dialog */}
+      {showPollDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-neutral-700 w-full max-w-md flex flex-col">
+            {/* Dialog Header */}
+            <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-slate-100 dark:border-neutral-800">
+              <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                <span className="text-xl">📊</span> Create Poll
+              </h2>
+              <button
+                onClick={() => setShowPollDialog(false)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-2xl leading-none transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="px-5 py-4 flex flex-col gap-4 overflow-y-auto max-h-[60vh]">
+              {/* Question */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">
+                  Question
+                </label>
+                <input
+                  type="text"
+                  value={pollQuestion}
+                  onChange={(e) => setPollQuestion(e.target.value)}
+                  placeholder="Ask something..."
+                  className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-400 dark:focus:ring-amber-600"
+                />
+              </div>
+
+              {/* Options */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+                  Options
+                </label>
+                <div className="flex flex-col gap-2">
+                  {pollOptions.map((opt, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={opt}
+                        onChange={(e) => {
+                          const updated = [...pollOptions];
+                          updated[idx] = e.target.value;
+                          setPollOptions(updated);
+                        }}
+                        placeholder={`Option ${idx + 1}`}
+                        className="flex-1 bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 rounded-xl px-4 py-2 text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-400 dark:focus:ring-amber-600"
+                      />
+                      {pollOptions.length > 2 && (
+                        <button
+                          onClick={() =>
+                            setPollOptions(
+                              pollOptions.filter((_, i) => i !== idx),
+                            )
+                          }
+                          className="text-slate-400 hover:text-rose-500 transition-colors text-lg leading-none"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {pollOptions.length < 8 && (
+                  <button
+                    onClick={() => setPollOptions([...pollOptions, ""])}
+                    className="mt-2 text-sm text-amber-600 dark:text-amber-400 hover:text-amber-700 font-medium transition-colors"
+                  >
+                    + Add option
+                  </button>
+                )}
+              </div>
+
+              {/* Vote mode */}
+              <div className="flex items-center justify-between bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 rounded-xl px-4 py-3">
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                  Allow multiple votes
+                </span>
+                <button
+                  onClick={() => setPollAllowMultiple(!pollAllowMultiple)}
+                  className={`relative w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none ${
+                    pollAllowMultiple
+                      ? "bg-amber-500 dark:bg-amber-600"
+                      : "bg-slate-300 dark:bg-neutral-600"
+                  }`}
+                >
+                  <span
+                    className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${
+                      pollAllowMultiple ? "translate-x-5" : "translate-x-0"
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+
+            {/* Footer Buttons */}
+            <div className="px-5 pb-5 pt-3 flex gap-3">
+              <button
+                onClick={() => setShowPollDialog(false)}
+                className="flex-1 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-700 text-slate-600 dark:text-slate-300 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-neutral-800 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreatePoll}
+                disabled={isCreatingPoll}
+                className="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-500 text-white text-sm font-bold transition-colors disabled:opacity-50"
+              >
+                {isCreatingPoll ? "Creating..." : "Create Poll"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Input */}
       <div className="shrink-0 p-4 bg-amber-100 dark:bg-neutral-900 border-t border-amber-200 dark:border-neutral-800 w-full">
@@ -468,6 +803,17 @@ function toDisplay(m: ChatMessage): DisplayMessage {
           _id: m.replyOn._id,
           message: m.replyOn.message,
           senderName: m.replyOn.sender?.name || "User",
+        }
+      : undefined,
+    poll: m.poll
+      ? {
+          _id: m.poll._id,
+          question: m.poll.question,
+          allowMultiple: m.poll.allowMultiple,
+          options: m.poll.options.map((o) => ({
+            text: o.text,
+            votes: o.votes,
+          })),
         }
       : undefined,
   };

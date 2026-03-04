@@ -11,9 +11,19 @@ import {
   FaHistory,
 } from "react-icons/fa";
 import { useRouter } from "next/navigation";
-import { createVideoCallApi } from "@/api/api";
+import { createVideoCallApi, getCallHistoryApi } from "@/api/api";
 import { useAuth } from "@/context/AuthContext";
 import toast from "react-hot-toast";
+
+interface CallHistory {
+  _id: string;
+  host: { _id: string; name: string; avatar?: string };
+  guest?: { _id: string; name: string; avatar?: string };
+  roomID: string;
+  startedAt: string;
+  endedAt?: string;
+  isEnded: boolean;
+}
 
 const VideoPage = () => {
   const [time, setTime] = useState(new Date());
@@ -24,8 +34,9 @@ const VideoPage = () => {
   const [scheduledDate, setScheduledDate] = useState("");
   const [roomCode, setRoomCode] = useState("");
   const [joinRoomCode, setJoinRoomCode] = useState("");
+  const [callHistory, setCallHistory] = useState<CallHistory[]>([]);
   const router = useRouter();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
 
   const d = new Date();
   const todayDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -36,6 +47,11 @@ const VideoPage = () => {
     const timer = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    if (token) fetchCallHistory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
 
   // Prevent background scrolling when a modal is open
   useEffect(() => {
@@ -68,27 +84,12 @@ const VideoPage = () => {
       })
     : "Loading...";
 
-  // TODO: fetch history from database and remove this array
-  const history = [
-    {
-      id: 1,
-      name: "Rahul Singh",
-      duration: "45 mins",
-      datetime: "Oct 24, 10:00 AM",
-    },
-    {
-      id: 2,
-      name: "Project Sync",
-      duration: "1 hr 20 mins",
-      datetime: "Oct 23, 02:30 PM",
-    },
-    {
-      id: 3,
-      name: "Amit Kumar",
-      duration: "15 mins",
-      datetime: "Oct 22, 11:15 AM",
-    },
-  ];
+  const fetchCallHistory = async () => {
+    const res = await getCallHistoryApi(token!);
+    if (res) {
+      setCallHistory(res);
+    }
+  };
 
   const handleInstantMeeting = () => {
     setStartMetting(true);
@@ -139,24 +140,55 @@ const VideoPage = () => {
           </div>
 
           <div className="flex flex-col gap-4 overflow-y-auto pr-2 py-1">
-            {history.map((item) => (
-              <div
-                key={item.id}
-                className="bg-pink-100 dark:bg-neutral-700 p-4 border-4 border-black dark:border-white rounded-2xl shadow-[4px_4px_0_0_#000] dark:shadow-[4px_4px_0_0_#fff] flex justify-between items-center hover:-translate-y-1 transition-transform cursor-default group"
-              >
-                <div>
-                  <h4 className="font-black text-xl text-black dark:text-white group-hover:text-pink-600 dark:group-hover:text-emerald-400 transition-colors">
-                    {item.name}
-                  </h4>
-                  <p className="text-sm font-bold text-neutral-700 dark:text-neutral-300 mt-1">
-                    {item.datetime}
-                  </p>
+            {callHistory.length === 0 && (
+              <p className="text-center text-neutral-500 dark:text-neutral-400 font-medium py-6">
+                No call history yet
+              </p>
+            )}
+            {callHistory.map((item) => {
+              // Show the other participant's name
+              const otherUser =
+                item.host._id === user?._id ? item.guest : item.host;
+              const otherName = otherUser?.name ?? "Unknown";
+
+              // Format duration as m:ss or "Ongoing"
+              let duration = "Ongoing";
+              if (item.endedAt) {
+                const secs = Math.floor(
+                  (new Date(item.endedAt).getTime() -
+                    new Date(item.startedAt).getTime()) /
+                    1000,
+                );
+                const m = Math.floor(secs / 60);
+                const s = secs % 60;
+                duration = `${m}m ${s}s`;
+              }
+
+              return (
+                <div
+                  key={item._id}
+                  className="bg-pink-100 dark:bg-neutral-700 p-4 border-4 border-black dark:border-white rounded-2xl shadow-[4px_4px_0_0_#000] dark:shadow-[4px_4px_0_0_#fff] flex justify-between items-center hover:-translate-y-1 transition-transform cursor-default group"
+                >
+                  <div>
+                    <h4 className="font-black text-xl text-black dark:text-white group-hover:text-pink-600 dark:group-hover:text-emerald-400 transition-colors">
+                      {otherName}
+                    </h4>
+                    <p className="text-sm font-bold text-neutral-700 dark:text-neutral-300 mt-1">
+                      {new Date(item.startedAt).toLocaleString("en-US", {
+                        timeZone: "Asia/Kolkata",
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </p>
+                  </div>
+                  <div className="bg-lime-300 dark:bg-teal-500 px-3 py-1.5 rounded-xl border-2 border-black dark:border-white font-black text-sm text-black dark:text-white flex text-center items-center justify-center shadow-[2px_2px_0_0_#000] dark:shadow-[2px_2px_0_0_#fff] min-w-[70px]">
+                    {duration}
+                  </div>
                 </div>
-                <div className="bg-lime-300 dark:bg-teal-500 px-3 py-1.5 rounded-xl border-2 border-black dark:border-white font-black text-sm text-black dark:text-white flex text-center items-center justify-center shadow-[2px_2px_0_0_#000] dark:shadow-[2px_2px_0_0_#fff] min-w-[70px]">
-                  {item.duration}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
@@ -176,7 +208,7 @@ const VideoPage = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full mt-4">
           {/* Schedule Meeting */}
           <div
-            onClick={() => setScheduleMeeting(true)}
+            // onClick={() => setScheduleMeeting(true)}
             className="md:col-span-2 group relative w-full flex flex-col md:flex-row items-center justify-center gap-6 px-10 py-12 bg-cyan-400 dark:bg-sky-500 text-black dark:text-white border-4 border-black dark:border-white rounded-3xl hover:-translate-y-2 hover:shadow-[8px_8px_0_0_#000] dark:hover:shadow-[8px_8px_0_0_#fff] transition-all shadow-[4px_4px_0_0_#000] dark:shadow-[4px_4px_0_0_#fff] cursor-pointer"
           >
             <FaCalendarPlus className="text-6xl md:text-7xl group-hover:scale-110 group-hover:rotate-12 transition-transform" />
@@ -189,7 +221,8 @@ const VideoPage = () => {
               </span>
             </div>
             <span className="absolute bottom-6 right-8 bg-pink-400 dark:bg-rose-500 text-black dark:text-white text-md px-4 py-2 font-bold rounded-full border-2 border-black dark:border-white rotate-6 group-hover:-rotate-6 transition-transform shadow-[2px_2px_0_0_#000] dark:shadow-[2px_2px_0_0_#fff] hidden sm:block">
-              Calendar!
+              {/* Calendar! */}
+              Coming Soon!
             </span>
           </div>
 

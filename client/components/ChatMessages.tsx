@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useEffect, useRef, useCallback, useState } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
+import type { PollData } from "@/api/api";
+import PollMessage from "@/components/PollMessage";
 
 export interface DisplayMessage {
   _id?: string;
@@ -17,6 +19,7 @@ export interface DisplayMessage {
     message: string;
     senderName: string;
   };
+  poll?: PollData;
 }
 
 interface ChatMessagesProps {
@@ -35,6 +38,9 @@ interface ChatMessagesProps {
   onDeleteMessage?: (msg: DisplayMessage) => void;
   onReplyMessage?: (msg: DisplayMessage) => void;
   onReactMessage?: (msg: DisplayMessage, reaction: string) => void;
+  onPinMessage?: (msg: DisplayMessage) => void;
+  onVotePoll?: (msg: DisplayMessage, optionIndex: number) => void;
+  groupAdminId?: string;
 }
 
 const ChatMessages = ({
@@ -51,6 +57,9 @@ const ChatMessages = ({
   onDeleteMessage,
   onReplyMessage,
   onReactMessage,
+  onPinMessage,
+  onVotePoll,
+  groupAdminId,
 }: ChatMessagesProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -126,6 +135,7 @@ const ChatMessages = ({
         return (
           <div
             key={msg._id || idx}
+            data-message-id={msg._id || idx}
             className={`flex items-end gap-3 max-w-[80%] animate-chat-message ${isSelf ? "self-end justify-end" : "self-start"}`}
           >
             {!isSelf && (
@@ -160,70 +170,110 @@ const ChatMessages = ({
                   <div
                     className={`absolute top-1/2 -translate-y-1/2 ${isSelf ? "right-[105%] mr-2" : "left-[105%] ml-2"} z-50 flex flex-col gap-1 bg-white dark:bg-neutral-800 shadow-xl border border-slate-200 dark:border-neutral-700 rounded-xl p-1.5 min-w-[140px] animate-in fade-in zoom-in duration-200`}
                   >
-                    {/* Reaction Picker Row */}
-                    <div className="flex items-center justify-between px-2 py-1.5 mb-1 border-b border-slate-100 dark:border-neutral-700">
-                      {[
-                        "👍",
-                        "❤️",
-                        "😂",
-                        "😮",
-                        "😍",
-                        "😭",
-                        "😉",
-                        "👌",
-                        "👏",
-                        "🤣",
-                        "😡",
-                      ].map((emoji) => (
-                        <button
-                          key={emoji}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (onReactMessage) onReactMessage(msg, emoji);
-                            setSelectedMessageId(null);
-                          }}
-                          className="hover:scale-125 transition-transform text-lg"
-                        >
-                          {emoji}
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Only show Edit if within 3 minutes of sending */}
-                    {isSelf &&
-                      (!msg.createdAt ||
-                        Date.now() - new Date(msg.createdAt).getTime() <=
-                          3 * 60 * 1000) && (
+                    {msg.poll ? (
+                      /* Poll message: Pin (all) + Delete (creator / group admin) */
+                      <>
                         <button
                           onClick={() => {
-                            if (onEditMessage) onEditMessage(msg);
+                            if (onPinMessage) onPinMessage(msg);
                             setSelectedMessageId(null);
                           }}
                           className="w-full text-left px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-lime-50 dark:hover:bg-neutral-700 rounded-lg transition-colors font-medium flex items-center justify-between"
                         >
-                          Edit <span>✏️</span>
+                          Pin <span>📌</span>
                         </button>
-                      )}
-                    {isSelf && (
-                      <button
-                        onClick={() => {
-                          if (onDeleteMessage) onDeleteMessage(msg);
-                          setSelectedMessageId(null);
-                        }}
-                        className="w-full text-left px-3 py-2 text-sm text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors font-medium flex items-center justify-between"
-                      >
-                        Delete <span>🗑️</span>
-                      </button>
+                        {(isSelf || currentUserId === groupAdminId) && (
+                          <button
+                            onClick={() => {
+                              if (onDeleteMessage) onDeleteMessage(msg);
+                              setSelectedMessageId(null);
+                            }}
+                            className="w-full text-left px-3 py-2 text-sm text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors font-medium flex items-center justify-between"
+                          >
+                            Delete Poll <span>🗑️</span>
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      /* Regular message: full menu */
+                      <>
+                        {/* Reaction Picker Row */}
+                        <div className="flex items-center justify-between px-2 py-1.5 mb-1 border-b border-slate-100 dark:border-neutral-700">
+                          {[
+                            "👍",
+                            "❤️",
+                            "😂",
+                            "😮",
+                            "😍",
+                            "😭",
+                            "😉",
+                            "👌",
+                            "👏",
+                            "🤣",
+                            "😡",
+                          ].map((emoji) => (
+                            <button
+                              key={emoji}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (onReactMessage) onReactMessage(msg, emoji);
+                                setSelectedMessageId(null);
+                              }}
+                              className="hover:scale-125 transition-transform text-lg"
+                            >
+                              {emoji}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Only show Edit if within 3 minutes of sending */}
+                        {isSelf &&
+                          (!msg.createdAt ||
+                            Date.now() - new Date(msg.createdAt).getTime() <=
+                              3 * 60 * 1000) && (
+                            <button
+                              onClick={() => {
+                                if (onEditMessage) onEditMessage(msg);
+                                setSelectedMessageId(null);
+                              }}
+                              className="w-full text-left px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-lime-50 dark:hover:bg-neutral-700 rounded-lg transition-colors font-medium flex items-center justify-between"
+                            >
+                              Edit <span>✏️</span>
+                            </button>
+                          )}
+                        {isSelf && (
+                          <button
+                            onClick={() => {
+                              if (onDeleteMessage) onDeleteMessage(msg);
+                              setSelectedMessageId(null);
+                            }}
+                            className="w-full text-left px-3 py-2 text-sm text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors font-medium flex items-center justify-between"
+                          >
+                            Delete <span>🗑️</span>
+                          </button>
+                        )}
+                        <button
+                          onClick={() => {
+                            if (onReplyMessage) onReplyMessage(msg);
+                            setSelectedMessageId(null);
+                          }}
+                          className="w-full text-left px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-lime-50 dark:hover:bg-neutral-700 rounded-lg transition-colors font-medium flex items-center justify-between"
+                        >
+                          Reply <span>↩</span>
+                        </button>
+                        {!msg.deleted && (
+                          <button
+                            onClick={() => {
+                              if (onPinMessage) onPinMessage(msg);
+                              setSelectedMessageId(null);
+                            }}
+                            className="w-full text-left px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-lime-50 dark:hover:bg-neutral-700 rounded-lg transition-colors font-medium flex items-center justify-between"
+                          >
+                            Pin <span>📌</span>
+                          </button>
+                        )}
+                      </>
                     )}
-                    <button
-                      onClick={() => {
-                        if (onReplyMessage) onReplyMessage(msg);
-                        setSelectedMessageId(null);
-                      }}
-                      className="w-full text-left px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-lime-50 dark:hover:bg-neutral-700 rounded-lg transition-colors font-medium flex items-center justify-between"
-                    >
-                      Reply <span>↩</span>
-                    </button>
                   </div>
                 </>
               )}
@@ -278,6 +328,15 @@ const ChatMessages = ({
                     <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2">
                       🚫 This message was deleted
                     </p>
+                  ) : msg.poll ? (
+                    <PollMessage
+                      poll={msg.poll}
+                      currentUserId={currentUserId}
+                      senderName={msg.senderName || "Someone"}
+                      onVote={(optionIndex) => {
+                        if (onVotePoll) onVotePoll(msg, optionIndex);
+                      }}
+                    />
                   ) : (
                     <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
                   )}

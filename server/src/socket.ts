@@ -8,6 +8,8 @@ import {
   saveGroupMessage,
 } from "./controllers/message.controller";
 import { MessageModel } from "./models/message.model";
+import { IndividualMessageModel } from "./models/individual.model";
+import { PollModel } from "./models/poll.model";
 
 // Cache group members
 const groupCache = new Map<string, string[]>();
@@ -350,6 +352,207 @@ export const initSocketListeners = (io: Server) => {
         }
       },
     );
+
+    // PIN MESSAGE
+    socket.on(
+      "pin-message",
+      async (data: {
+        roomId: string;
+        messageId: string;
+        groupId?: string;
+        pinnedPersonName?: string;
+      }) => {
+        try {
+          const { roomId, messageId, groupId, pinnedPersonName } = data;
+          const msg = await MessageModel.findById(messageId);
+          if (!msg) return;
+          if (groupId) {
+            const group = await GroupModel.findById(groupId);
+            if (!group) return;
+            group.pinnedMessage = messageId as any;
+            await group.save();
+            socket
+              .to(groupId)
+              .emit("message-pinned", { messageId, pinnedPersonName });
+            socket.emit("message-pinned", { messageId, pinnedPersonName });
+          } else {
+            // roomId is a composite "userId1_userId2" string (NOT a Mongo ObjectId).
+            // Split it to get both user IDs and do a findOne with $or.
+            const parts = roomId.split("_");
+            const individual = await IndividualMessageModel.findOne({
+              $or: [
+                { user1: parts[0], user2: parts[1] },
+                { user1: parts[1], user2: parts[0] },
+              ],
+            });
+            if (!individual) return;
+            individual.pinnedMessage = messageId as any;
+            await individual.save();
+            socket
+              .to(roomId)
+              .emit("message-pinned", { messageId, pinnedPersonName });
+            socket.emit("message-pinned", { messageId, pinnedPersonName });
+          }
+        } catch (err) {
+          console.error("[pin-message error]:", err);
+        }
+      },
+    );
+
+    // UNPIN MESSAGE
+    socket.on(
+      "unpin-message",
+      async (data: { roomId: string; groupId?: string }) => {
+        try {
+          const { roomId, groupId } = data;
+          if (groupId) {
+            await GroupModel.findByIdAndUpdate(groupId, {
+              $unset: { pinnedMessage: 1 },
+            });
+            socket.to(groupId).emit("message-unpinned");
+            socket.emit("message-unpinned");
+          } else {
+            const parts = roomId.split("_");
+            await IndividualMessageModel.findOneAndUpdate(
+              {
+                $or: [
+                  { user1: parts[0], user2: parts[1] },
+                  { user1: parts[1], user2: parts[0] },
+                ],
+              },
+              { $unset: { pinnedMessage: 1 } },
+            );
+            socket.to(roomId).emit("message-unpinned");
+            socket.emit("message-unpinned");
+          }
+        } catch (err) {
+          console.error("[unpin-message error]:", err);
+        }
+      },
+    );
+
+    // --------- POLL SOCKET STARTS ----------
+
+    // CREATE POLL
+    socket.on(
+      "send-poll",
+      async (data: {
+        groupId: string;
+        senderId: string;
+        senderName: string;
+        senderAvatar?: string;
+        question: string;
+        options: string[];
+        allowMultiple: boolean;
+        tempId?: string;
+      }) => {
+        try {
+          const poll = await PollModel.create({
+            groupId: data.groupId,
+            createdBy: data.senderId,
+            question: data.question,
+            allowMultiple: data.allowMultiple,
+            options: data.options.map((text) => ({ text, votes: [] })),
+          });
+
+          // Persist as a Message so it survives page refresh
+          const message = await MessageModel.create({
+            sender: data.senderId,
+            chatId: data.groupId,
+            chatType: "Group",
+            message: `📊 ${data.question}`,
+            type: "poll",
+            poll: poll._id,
+          });
+
+          await GroupModel.findByIdAndUpdate(data.groupId, {
+            lastMessage: message._id,
+          });
+
+          const payload = {
+            _id: message._id.toString(),
+            tempId: data.tempId,
+            senderId: data.senderId,
+            senderName: data.senderName,
+            senderAvatar: data.senderAvatar,
+            groupId: data.groupId,
+            createdAt: (message as any).createdAt,
+            poll: {
+              _id: poll._id.toString(),
+              question: poll.question,
+              allowMultiple: poll.allowMultiple,
+              options: poll.options.map((o) => ({
+                text: o.text,
+                votes: o.votes.map((v) => v.toString()),
+              })),
+            },
+          };
+
+          // Broadcast to the whole group room (including sender)
+          io.to(data.groupId).emit("receive-group-poll", payload);
+        } catch (err) {
+          console.error("[send-poll error]:", err);
+        }
+      },
+    );
+
+    // VOTE ON POLL
+    socket.on(
+      "vote-poll",
+      async (data: {
+        pollId: string;
+        groupId: string;
+        optionIndex: number;
+      }) => {
+        try {
+          const userId = (socket as any).userId;
+          const poll = await PollModel.findById(data.pollId);
+          if (!poll) return;
+
+          const option = poll.options[data.optionIndex];
+          if (!option) return;
+
+          const alreadyVoted = option.votes.some(
+            (v) => v.toString() === userId,
+          );
+
+          if (poll.allowMultiple) {
+            // Toggle: add or remove this option's vote
+            if (alreadyVoted) {
+              option.votes = option.votes.filter(
+                (v) => v.toString() !== userId,
+              ) as any;
+            } else {
+              option.votes.push(userId);
+            }
+          } else {
+            // Single-vote: clear all other options first, then toggle this one
+            poll.options.forEach((o, i) => {
+              o.votes = o.votes.filter((v) => v.toString() !== userId) as any;
+            });
+            if (!alreadyVoted) {
+              poll.options[data.optionIndex]?.votes.push(userId);
+            }
+          }
+
+          await poll.save();
+
+          const payload = {
+            pollId: data.pollId,
+            options: poll.options.map((o) => ({
+              text: o.text,
+              votes: o.votes.map((v) => v.toString()),
+            })),
+          };
+
+          io.to(data.groupId).emit("poll-updated", payload);
+        } catch (err) {
+          console.error("[vote-poll error]:", err);
+        }
+      },
+    );
+
+    // --------- POLL SOCKET ENDS ----------
 
     // --------- VIDEO CALL SOCKET STARTS ----------
 

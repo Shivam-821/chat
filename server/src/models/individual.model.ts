@@ -4,6 +4,7 @@ export interface IIndividual extends Document {
   user1: Types.ObjectId;
   user2: Types.ObjectId;
   lastMessage?: Types.ObjectId;
+  pinnedMessage?: Types.ObjectId;
 }
 
 const individualMessageSchema = new Schema<IIndividual>(
@@ -20,6 +21,10 @@ const individualMessageSchema = new Schema<IIndividual>(
       type: Schema.Types.ObjectId,
       ref: "Message",
     },
+    pinnedMessage: { // only one message can be pinned at a time
+      type: Schema.Types.ObjectId,
+      ref: "Message",
+    }
   },
   {
     timestamps: true,
