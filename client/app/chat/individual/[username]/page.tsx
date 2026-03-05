@@ -596,10 +596,6 @@ const IndividualChatPage = ({ params }: PageProps) => {
             size={18}
             className="cursor-pointer hover:text-lime-600 dark:hover:text-lime-400 transition-colors hover:scale-110"
           />
-          <FaVideo
-            size={20}
-            className="cursor-pointer hover:text-lime-600 dark:hover:text-lime-400 transition-colors hover:scale-110"
-          />
           <FaInfoCircle
             onClick={() =>
               router.push(`/chat/individual/${decodedUsername}/info`)
