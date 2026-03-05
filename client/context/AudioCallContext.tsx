@@ -46,6 +46,7 @@ export const AudioCallProvider = ({
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const currentRoomIdRef = useRef<string>("");
   const isCallerRef = useRef<boolean>(false);
+  const pendingCandidatesRef = useRef<RTCIceCandidateInit[]>([]);
 
   const callStartTimeRef = useRef<number | null>(null);
 
@@ -65,6 +66,7 @@ export const AudioCallProvider = ({
       setIsReceivingCall(true);
       currentRoomIdRef.current = [user._id, userId].sort().join("_");
       isCallerRef.current = false;
+      socket.emit("join-audio-call-room", { roomId: currentRoomIdRef.current });
     };
 
     const handleReject = () => {
@@ -85,6 +87,18 @@ export const AudioCallProvider = ({
         await peerConnectionRef.current.setRemoteDescription(
           new RTCSessionDescription(offer),
         );
+        // Process queued ice candidates
+        pendingCandidatesRef.current.forEach(async (candidate) => {
+          try {
+            await peerConnectionRef.current?.addIceCandidate(
+              new RTCIceCandidate(candidate),
+            );
+          } catch (e) {
+            console.error(e);
+          }
+        });
+        pendingCandidatesRef.current = [];
+
         const answer = await peerConnectionRef.current.createAnswer();
         await peerConnectionRef.current.setLocalDescription(answer);
         socket.emit("audio-call-answer", {
@@ -103,19 +117,49 @@ export const AudioCallProvider = ({
           new RTCSessionDescription(answer),
         );
         callStartTimeRef.current = Date.now();
+        // Process queued ice candidates
+        pendingCandidatesRef.current.forEach(async (candidate) => {
+          try {
+            await peerConnectionRef.current?.addIceCandidate(
+              new RTCIceCandidate(candidate),
+            );
+          } catch (e) {
+            console.error(e);
+          }
+        });
+        pendingCandidatesRef.current = [];
       } catch (err) {
         console.error("Error handling answer", err);
       }
     };
 
     const handleIceCandidate = async ({ candidate }: { candidate: any }) => {
-      if (!peerConnectionRef.current) return;
+      const pc = peerConnectionRef.current;
+      if (!pc) return;
+
+      if (pc.remoteDescription && pc.remoteDescription.type) {
+        try {
+          await pc.addIceCandidate(new RTCIceCandidate(candidate));
+        } catch (err) {
+          console.error("Error adding ice candidate", err);
+        }
+      } else {
+        pendingCandidatesRef.current.push(candidate);
+      }
+    };
+
+    const handleAccepted = async () => {
+      const pc = peerConnectionRef.current;
+      if (!pc || !isCallerRef.current) return;
       try {
-        await peerConnectionRef.current.addIceCandidate(
-          new RTCIceCandidate(candidate),
-        );
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        socket.emit("audio-call-offer", {
+          roomId: currentRoomIdRef.current,
+          offer,
+        });
       } catch (err) {
-        console.error("Error adding ice candidate", err);
+        console.error("Error creating offer", err);
       }
     };
 
@@ -126,6 +170,7 @@ export const AudioCallProvider = ({
     socket.on("audio-call-offer", handleOffer);
     socket.on("audio-call-answer", handleAnswer);
     socket.on("audio-call-ice-candidate", handleIceCandidate);
+    socket.on("audio-call-accepted", handleAccepted);
 
     return () => {
       socket.off("user-joined-audio-call", handleUserJoined);
@@ -135,6 +180,7 @@ export const AudioCallProvider = ({
       socket.off("audio-call-offer", handleOffer);
       socket.off("audio-call-answer", handleAnswer);
       socket.off("audio-call-ice-candidate", handleIceCandidate);
+      socket.off("audio-call-accepted", handleAccepted);
     };
   }, [socket, user]);
 
@@ -173,21 +219,6 @@ export const AudioCallProvider = ({
         }
       };
 
-      // Need to inform peer when negotiation is needed (for the caller)
-      pc.onnegotiationneeded = async () => {
-        if (!isCallerRef.current) return; // Only caller creates offer initially
-        try {
-          const offer = await pc.createOffer();
-          await pc.setLocalDescription(offer);
-          socket.emit("audio-call-offer", {
-            roomId: currentRoomIdRef.current,
-            offer,
-          });
-        } catch (err) {
-          console.error("Error creating offer", err);
-        }
-      };
-
       return pc;
     } catch (err) {
       console.error("Error accessing media devices.", err);
@@ -212,7 +243,7 @@ export const AudioCallProvider = ({
     setIsCallActive(true);
     callStartTimeRef.current = Date.now();
     await setupMediaAndPeer();
-    // Wait for offer from caller
+    socket.emit("audio-call-accepted", { roomId: currentRoomIdRef.current });
   };
 
   const rejectCall = () => {
@@ -258,9 +289,13 @@ export const AudioCallProvider = ({
     currentRoomIdRef.current = "";
     isCallerRef.current = false;
     callStartTimeRef.current = null;
+    pendingCandidatesRef.current = [];
 
     if (localStream) {
-      localStream.getTracks().forEach((track) => track.stop());
+      localStream.getTracks().forEach((track) => {
+        track.stop();
+        track.enabled = false;
+      });
       setLocalStream(null);
     }
     setRemoteStream(null);
