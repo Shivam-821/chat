@@ -10,6 +10,7 @@ import { E2EProvider } from "@/context/E2EContext";
 import { NotificationProvider } from "@/context/NotificationContext";
 import { Toaster } from "react-hot-toast";
 import SocketNotification from "@/components/SocketNotification";
+import AudioCallBox from "@/components/AudioCallBox";
 
 const comicNeue = Comic_Neue({
   variable: "--font-comic-neue",
@@ -42,6 +43,7 @@ export default function RootLayout({
                   <NavBar />
                   <main className="grow flex flex-col w-full">{children}</main>
                   <SocketNotification />
+                  <AudioCallBox />
                   <Footer />
                   <Toaster
                     position="top-center"
