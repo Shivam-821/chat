@@ -628,6 +628,40 @@ export const initSocketListeners = (io: Server) => {
 
     // --------- VIDEO CALL SOCKET ENDS ----------
 
+    // --------- AUDIO CALL SOCKET STARTS ----------
+    
+    socket.on('join-audio-call', (data: { roomId: string }) => {
+      socket.join(data.roomId);
+      socket.to(data.roomId).emit('user-joined-audio-call', { userId: (socket as any).userId });
+    })
+
+    socket.on('leave-audio-call', (data: { roomId: string }) => {
+      socket.leave(data.roomId);
+      socket.to(data.roomId).emit('user-left-audio-call', { userId: (socket as any).userId });
+    })
+
+    socket.on('audio-call-answer', (data: { roomId: string, answer: any }) => {
+      socket.to(data.roomId).emit('audio-call-answer', { answer: data.answer });
+    })
+
+    socket.on('audio-call-offer', (data: { roomId: string, offer: any }) => {
+      socket.to(data.roomId).emit('audio-call-offer', { offer: data.offer });
+    })
+
+    socket.on('audio-call-ice-candidate', (data: { roomId: string, candidate: any }) => {
+      socket.to(data.roomId).emit('audio-call-ice-candidate', { candidate: data.candidate });
+    })
+
+    socket.on('audio-call-reject', (data: { roomId: string }) => {
+      socket.to(data.roomId).emit('audio-call-reject');
+    })
+
+    socket.on('audio-call-end', (data: { roomId: string }) => {
+      socket.to(data.roomId).emit('audio-call-end');
+    })
+
+    // --------- AUDIO CALL SOCKET ENDS ----------
+
     // DISCONNECT
     socket.on("disconnect", async () => {
       // Handle Video Call Disconnect Recovery

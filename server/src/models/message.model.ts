@@ -1,11 +1,22 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
 
+enum MessageType {
+  TEXT = "text",
+  IMAGE = "image",
+  VIDEO = "video",
+  AUDIO = "audio",
+  FILE = "file",
+  POLL = "poll",
+  AUDIO_CALL = "audio_call",
+  VIDEO_CALL = "video_call",
+}
+
 export interface IMessage extends Document {
   sender: Types.ObjectId;
   chatId: Types.ObjectId;
   chatType: "IndividualMessage" | "Group";
   message: string;
-  type: string;
+  type: MessageType;
   edited?: boolean;
   deleted?: boolean;
   reported?: boolean;
@@ -34,6 +45,7 @@ const messageSchema = new Schema<IMessage>(
     },
     message: {
       type: String,
+      enum: MessageType,
       required: true,
     },
     reactions: [
