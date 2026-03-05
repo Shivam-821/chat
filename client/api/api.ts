@@ -536,6 +536,7 @@ export interface ChatMessage {
   sender: { _id: string; name: string; avatar?: string };
   message: string;
   chatType: "IndividualMessage" | "Group";
+  type: string;
   createdAt: string;
   edited?: boolean;
   deleted?: boolean;

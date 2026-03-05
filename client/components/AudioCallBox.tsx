@@ -2,12 +2,34 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { MdCallEnd } from "react-icons/md";
+import { BsMicMuteFill, BsMic } from "react-icons/bs";
+import { useAudioCall } from "@/context/AudioCallContext";
 
 const AudioCallBox = () => {
+  const {
+    isCallActive,
+    isMuted,
+    toggleMute,
+    endCall,
+    remoteStream,
+    callerName,
+  } = useAudioCall();
+
   const [position, setPosition] = useState({ x: 100, y: 100 });
   const isDragging = useRef(false);
   const startPos = useRef({ x: 100, y: 100 });
   const draggableRef = useRef<HTMLDivElement>(null);
+  const remoteAudioRef = useRef<HTMLAudioElement>(null);
+
+  // Auto-play the remote stream when it arrives
+  useEffect(() => {
+    if (remoteAudioRef.current && remoteStream) {
+      remoteAudioRef.current.srcObject = remoteStream;
+      remoteAudioRef.current
+        .play()
+        .catch((err) => console.log("Remote audio play prevented:", err));
+    }
+  }, [remoteStream]);
 
   // To keep it simple globally, we'll use the window/document body as the container bounds
   // We initialize the position to sit near the bottom right on mount
@@ -92,6 +114,8 @@ const AudioCallBox = () => {
     e.currentTarget.releasePointerCapture(e.pointerId);
   };
 
+  if (!isCallActive) return null;
+
   return (
     <>
       <style>{`
@@ -110,7 +134,7 @@ const AudioCallBox = () => {
       {/* Draggable container wrapper fixed to top-left of DOM, then moved via transform */}
       <div
         ref={draggableRef}
-        className="w-[300px] h-[180px] rounded-2xl border border-white/20 shadow-[0_10px_40px_rgba(0,0,0,0.2)] fixed z-9999 overflow-hidden bg-white/90 backdrop-blur-xl transition-transform duration-75 cursor-grab active:cursor-grabbing touch-none select-none"
+        className="w-[300px] h-[180px] rounded-xl border border-white/20 shadow-[0_10px_40px_rgba(0,0,0,0.2)] fixed z-9999 overflow-hidden bg-white/40 backdrop-blur-xl transition-transform duration-75 cursor-grab active:cursor-grabbing touch-none select-none"
         style={{
           transform: `translate(${position.x}px, ${position.y}px)`,
           top: 0,
@@ -124,10 +148,11 @@ const AudioCallBox = () => {
       >
         {/* Top Section - Avatars & Waveform */}
         <div className="relative flex items-center justify-between px-8 w-full h-[65%] bg-linear-to-r from-amber-300 via-lime-200 to-amber-300 dark:from-slate-900 dark:via-zinc-900 dark:to-neutral-900 pointer-events-none select-none">
-          {/* Caller 1 */}
+          {/* Caller 1 (Self) */}
           <div className="relative flex items-center justify-center">
-           
-            <div className="w-14 h-14 rounded-full bg-amber-50 border-2 border-white z-10 shadow-lg"></div>
+            <div className="w-14 h-14 rounded-full bg-lime-200 border-2 border-white z-10 shadow-lg flex items-center justify-center text-lg font-bold text-lime-800">
+              Me
+            </div>
           </div>
 
           {/* Audio Waveform Signal */}
@@ -158,10 +183,11 @@ const AudioCallBox = () => {
             ></div>
           </div>
 
-          {/* Caller 2 */}
+          {/* Caller 2 (Remote) */}
           <div className="relative flex items-center justify-center">
-            
-            <div className="w-14 h-14 rounded-full bg-amber-50 border-2 border-white z-10 shadow-lg"></div>
+            <div className="w-14 h-14 rounded-full bg-amber-200 border-2 border-white z-10 shadow-lg flex items-center justify-center text-lg font-bold text-amber-800">
+              {callerName ? callerName.charAt(0).toUpperCase() : "?"}
+            </div>
           </div>
         </div>
 
@@ -169,12 +195,28 @@ const AudioCallBox = () => {
         <div className="w-full h-[35%] bg-linear-to-b from-yellow-100 to-yellow-200 dark:from-zinc-800 dark:to-black flex items-center justify-center relative">
           {/* Subtle glow effect behind button */}
           <div className="absolute bg-[#fc0f1b]/10 w-20 h-20 rounded-full blur-xl pointer-events-none"></div>
-
-          <div className="group relative cursor-pointer flex items-center justify-center z-10 no-drag">
+          {isMuted ? (
+            <BsMicMuteFill
+              onClick={toggleMute}
+              className="absolute top-3.5 left-8 bg-[#333338] hover:bg-zinc-600 cursor-pointer w-8.5 h-8.5 p-2 rounded-full text-red-400 no-drag z-10"
+            />
+          ) : (
+            <BsMic
+              onClick={toggleMute}
+              className="absolute top-3.5 left-8 bg-[#333338] hover:bg-zinc-600 cursor-pointer w-8.5 h-8.5 p-2 rounded-full text-green-400 animate-pulse no-drag z-10"
+            />
+          )}
+          <div
+            className="group relative cursor-pointer flex items-center justify-center z-10 no-drag"
+            onClick={endCall}
+          >
             <MdCallEnd className="text-2xl text-white bg-[#fc0f1b] group-hover:bg-red-600 rounded-full p-2.5 w-12 h-12 transform group-hover:scale-105 group-hover:rotate-8 transition-all duration-300 shadow-[0_0_20px_rgba(252,15,27,0.4)] group-hover:shadow-[0_0_25px_rgba(252,15,27,0.7)]" />
           </div>
         </div>
       </div>
+
+      {/* Hidden audio element to play remote stream */}
+      <audio ref={remoteAudioRef} autoPlay className="hidden" />
     </>
   );
 };

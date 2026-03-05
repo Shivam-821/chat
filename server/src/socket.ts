@@ -629,36 +629,111 @@ export const initSocketListeners = (io: Server) => {
     // --------- VIDEO CALL SOCKET ENDS ----------
 
     // --------- AUDIO CALL SOCKET STARTS ----------
-    
-    socket.on('join-audio-call', (data: { roomId: string }) => {
-      socket.join(data.roomId);
-      socket.to(data.roomId).emit('user-joined-audio-call', { userId: (socket as any).userId });
-    })
 
-    socket.on('leave-audio-call', (data: { roomId: string }) => {
+    socket.on(
+      "join-audio-call",
+      (data: { receiverId: string; caller: string }) => {
+        const roomId = [data.receiverId, (socket as any).userId]
+          .sort()
+          .join("_");
+        socket.join(roomId);
+        socket.to(data.receiverId).emit("user-joined-audio-call", {
+          userId: (socket as any).userId,
+          caller: data.caller,
+        });
+      },
+    );
+
+    socket.on("leave-audio-call", (data: { roomId: string }) => {
       socket.leave(data.roomId);
-      socket.to(data.roomId).emit('user-left-audio-call', { userId: (socket as any).userId });
-    })
+      socket
+        .to(data.roomId)
+        .emit("user-left-audio-call", { userId: (socket as any).userId });
+    });
 
-    socket.on('audio-call-answer', (data: { roomId: string, answer: any }) => {
-      socket.to(data.roomId).emit('audio-call-answer', { answer: data.answer });
-    })
+    socket.on("audio-call-answer", (data: { roomId: string; answer: any }) => {
+      socket.to(data.roomId).emit("audio-call-answer", { answer: data.answer });
+    });
 
-    socket.on('audio-call-offer', (data: { roomId: string, offer: any }) => {
-      socket.to(data.roomId).emit('audio-call-offer', { offer: data.offer });
-    })
+    socket.on("audio-call-offer", (data: { roomId: string; offer: any }) => {
+      socket.to(data.roomId).emit("audio-call-offer", { offer: data.offer });
+    });
 
-    socket.on('audio-call-ice-candidate', (data: { roomId: string, candidate: any }) => {
-      socket.to(data.roomId).emit('audio-call-ice-candidate', { candidate: data.candidate });
-    })
+    socket.on(
+      "audio-call-ice-candidate",
+      (data: { roomId: string; candidate: any }) => {
+        socket
+          .to(data.roomId)
+          .emit("audio-call-ice-candidate", { candidate: data.candidate });
+      },
+    );
 
-    socket.on('audio-call-reject', (data: { roomId: string }) => {
-      socket.to(data.roomId).emit('audio-call-reject');
-    })
+    socket.on("audio-call-reject", async (data: { roomId: string }) => {
+      socket.to(data.roomId).emit("audio-call-reject");
 
-    socket.on('audio-call-end', (data: { roomId: string }) => {
-      socket.to(data.roomId).emit('audio-call-end');
-    })
+      try {
+        const userId = (socket as any).userId;
+        const [id1, id2] = data.roomId.split("_");
+        const receiverId = id1 === userId ? id2 : id1;
+
+        if (userId && receiverId) {
+          const savedMessage = await saveIndividualMessage(
+            receiverId,
+            userId,
+            "Missed audio call",
+            undefined,
+            "audio_call",
+          );
+
+          if (savedMessage) {
+            const populatedMsg = await MessageModel.findById(savedMessage._id)
+              .populate("sender", "name avatar")
+              .lean();
+
+            io.to(userId).emit("receive-message", populatedMsg);
+            io.to(receiverId).emit("receive-message", populatedMsg);
+          }
+        }
+      } catch (err) {
+        console.error("Error saving audio call reject:", err);
+      }
+    });
+
+    socket.on(
+      "audio-call-end",
+      async (data: { roomId: string; duration?: string }) => {
+        socket.to(data.roomId).emit("audio-call-end");
+
+        try {
+          const userId = (socket as any).userId;
+          const [id1, id2] = data.roomId.split("_");
+          const receiverId = id1 === userId ? id2 : id1;
+
+          if (userId && receiverId) {
+            const savedMessage = await saveIndividualMessage(
+              userId,
+              receiverId,
+              data.duration
+                ? `Audio call ended (${data.duration})`
+                : "Audio call ended",
+              undefined,
+              "audio_call",
+            );
+
+            if (savedMessage) {
+              const populatedMsg = await MessageModel.findById(savedMessage._id)
+                .populate("sender", "name avatar")
+                .lean();
+
+              io.to(userId).emit("receive-message", populatedMsg);
+              io.to(receiverId).emit("receive-message", populatedMsg);
+            }
+          }
+        } catch (err) {
+          console.error("Error saving audio call message:", err);
+        }
+      },
+    );
 
     // --------- AUDIO CALL SOCKET ENDS ----------
 

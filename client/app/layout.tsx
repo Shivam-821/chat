@@ -8,9 +8,11 @@ import { AuthProvider } from "@/context/AuthContext";
 import { SocketProvider } from "@/context/SocketContext";
 import { E2EProvider } from "@/context/E2EContext";
 import { NotificationProvider } from "@/context/NotificationContext";
+import { AudioCallProvider } from "@/context/AudioCallContext";
 import { Toaster } from "react-hot-toast";
 import SocketNotification from "@/components/SocketNotification";
 import AudioCallBox from "@/components/AudioCallBox";
+import CallNotification from "@/components/CallNotification";
 
 const comicNeue = Comic_Neue({
   variable: "--font-comic-neue",
@@ -39,39 +41,44 @@ export default function RootLayout({
           <SocketProvider>
             <AuthProvider>
               <E2EProvider>
-                <NotificationProvider>
-                  <NavBar />
-                  <main className="grow flex flex-col w-full">{children}</main>
-                  <SocketNotification />
-                  <AudioCallBox />
-                  <Footer />
-                  <Toaster
-                    position="top-center"
-                    toastOptions={{
-                      style: {
-                        fontFamily: "var(--font-comic-neue)",
-                        borderRadius: "16px",
-                        fontWeight: "bold",
-                      },
-                      success: {
-                        className:
-                          "border-2 border-slate-800 bg-lime-100 dark:bg-lime-900 dark:text-lime-50 text-slate-800 shadow-[4px_4px_0_0_rgba(30,41,59,1)] dark:shadow-[4px_4px_0_0_rgba(0,0,0,1)]",
-                        iconTheme: {
-                          primary: "#1e293b",
-                          secondary: "#d9f99d",
+                <AudioCallProvider>
+                  <NotificationProvider>
+                    <NavBar />
+                    <main className="grow flex flex-col w-full">
+                      {children}
+                    </main>
+                    <SocketNotification />
+                    <AudioCallBox />
+                    <Footer />
+                    <Toaster
+                      position="top-center"
+                      toastOptions={{
+                        style: {
+                          fontFamily: "var(--font-comic-neue)",
+                          borderRadius: "16px",
+                          fontWeight: "bold",
                         },
-                      },
-                      error: {
-                        className:
-                          "border-2 border-slate-800 bg-rose-200 dark:bg-rose-900 dark:text-rose-50 text-slate-800 shadow-[4px_4px_0_0_rgba(30,41,59,1)] dark:shadow-[4px_4px_0_0_rgba(0,0,0,1)]",
-                        iconTheme: {
-                          primary: "#1e293b",
-                          secondary: "#fecdd3",
+                        success: {
+                          className:
+                            "border-2 border-slate-800 bg-lime-100 dark:bg-lime-900 dark:text-lime-50 text-slate-800 shadow-[4px_4px_0_0_rgba(30,41,59,1)] dark:shadow-[4px_4px_0_0_rgba(0,0,0,1)]",
+                          iconTheme: {
+                            primary: "#1e293b",
+                            secondary: "#d9f99d",
+                          },
                         },
-                      },
-                    }}
-                  />
-                </NotificationProvider>
+                        error: {
+                          className:
+                            "border-2 border-slate-800 bg-rose-200 dark:bg-rose-900 dark:text-rose-50 text-slate-800 shadow-[4px_4px_0_0_rgba(30,41,59,1)] dark:shadow-[4px_4px_0_0_rgba(0,0,0,1)]",
+                          iconTheme: {
+                            primary: "#1e293b",
+                            secondary: "#fecdd3",
+                          },
+                        },
+                      }}
+                    />
+                  </NotificationProvider>
+                  <CallNotification />
+                </AudioCallProvider>
               </E2EProvider>
             </AuthProvider>
           </SocketProvider>

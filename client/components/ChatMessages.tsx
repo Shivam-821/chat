@@ -8,6 +8,7 @@ export interface DisplayMessage {
   _id?: string;
   senderId: string;
   message: string;
+  type?: string;
   senderName?: string;
   senderAvatar?: string;
   createdAt?: string;
@@ -337,8 +338,26 @@ const ChatMessages = ({
                         if (onVotePoll) onVotePoll(msg, optionIndex);
                       }}
                     />
+                  ) : msg.type === "audio_call" ? (
+                    <div className="flex items-center gap-3 py-1">
+                      <div
+                        className={`p-2.5 rounded-full ${isSelf ? "bg-lime-300 dark:bg-lime-800" : "bg-slate-100 dark:bg-neutral-700"}`}
+                      >
+                        <span className="text-xl">📞</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-sm">
+                          Audio Call
+                        </span>
+                        <span className="text-xs opacity-80">
+                          {msg.message}
+                        </span>
+                      </div>
+                    </div>
                   ) : (
-                    <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
+                    <p className="text-sm border-0 bg-transparent outline-none resize-none cursor-text whitespace-pre-wrap select-text max-w-full m-0 wrap-break-words">
+                      {msg.message}
+                    </p>
                   )}
 
                   {msg.reactions && msg.reactions.length > 0 && (

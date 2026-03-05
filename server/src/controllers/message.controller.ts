@@ -20,6 +20,7 @@ export const saveIndividualMessage = async (
   receiverId: string,
   message: string,
   replyOn?: string,
+  type: string = "text",
 ) => {
   // Find the IndividualMessage chat document for this pair
   const chat = await IndividualMessageModel.findOne({
@@ -36,7 +37,7 @@ export const saveIndividualMessage = async (
     chatId: chat._id,
     chatType: "IndividualMessage",
     message,
-    type: "text",
+    type,
     replyOn: replyOn ? new mongoose.Types.ObjectId(replyOn) : undefined,
   });
 

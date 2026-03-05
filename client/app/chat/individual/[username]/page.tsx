@@ -23,6 +23,7 @@ import {
 import { useSocket } from "@/context/SocketContext";
 import { useE2E } from "@/context/E2EContext";
 import ChatMessages, { DisplayMessage } from "@/components/ChatMessages";
+import { useAudioCall } from "@/context/AudioCallContext";
 
 interface PageProps {
   params: Promise<{ username: string }>;
@@ -58,6 +59,7 @@ const IndividualChatPage = ({ params }: PageProps) => {
   const [verifyingSecure, setVerifyingSecure] = useState(false);
 
   const { encryptMsg, decryptMsg, isE2EReady } = useE2E();
+  const { startCall } = useAudioCall();
 
   const router = useRouter();
 
@@ -545,6 +547,11 @@ const IndividualChatPage = ({ params }: PageProps) => {
     socket.emit("unpin-message", { roomId });
   };
 
+  const handleAudioCall = () => {
+    if (!user?._id || !contact?._id) return;
+    startCall(contact._id);
+  };
+
   return (
     <div className="flex flex-col h-full bg-lime-50 dark:bg-neutral-950 w-full relative overflow-hidden">
       {/* Chat Header */}
@@ -583,6 +590,9 @@ const IndividualChatPage = ({ params }: PageProps) => {
         </div>
         <div className="flex items-center gap-6 text-slate-600 dark:text-slate-400">
           <FaPhoneAlt
+            onClick={() => {
+              handleAudioCall();
+            }}
             size={18}
             className="cursor-pointer hover:text-lime-600 dark:hover:text-lime-400 transition-colors hover:scale-110"
           />
@@ -732,6 +742,7 @@ function toDisplay(m: ChatMessage): DisplayMessage {
     _id: m._id,
     senderId: m.sender._id,
     message: m.deleted ? "🚫 This message was deleted" : m.message,
+    type: m.type,
     senderAvatar: m.sender.avatar,
     createdAt: m.createdAt,
     edited: m.edited,

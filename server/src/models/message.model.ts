@@ -45,7 +45,6 @@ const messageSchema = new Schema<IMessage>(
     },
     message: {
       type: String,
-      enum: MessageType,
       required: true,
     },
     reactions: [
