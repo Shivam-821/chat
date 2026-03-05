@@ -644,6 +644,10 @@ export const initSocketListeners = (io: Server) => {
       },
     );
 
+    socket.on("join-audio-call-room", (data: { roomId: string }) => {
+      socket.join(data.roomId);
+    });
+
     socket.on("leave-audio-call", (data: { roomId: string }) => {
       socket.leave(data.roomId);
       socket
@@ -657,6 +661,10 @@ export const initSocketListeners = (io: Server) => {
 
     socket.on("audio-call-offer", (data: { roomId: string; offer: any }) => {
       socket.to(data.roomId).emit("audio-call-offer", { offer: data.offer });
+    });
+
+    socket.on("audio-call-accepted", (data: { roomId: string }) => {
+      socket.to(data.roomId).emit("audio-call-accepted");
     });
 
     socket.on(
