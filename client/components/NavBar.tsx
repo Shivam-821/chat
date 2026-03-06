@@ -15,10 +15,12 @@ const NavBar = () => {
   const handleLogout = async () => {
     if (!token) return;
     const res = await logoutApi(token);
-    if (res.statusCode === 200) {
+    // Even if res is null (API failed), safely call logout to avoid getting stuck
+    if (res?.statusCode === 200 || !res) {
+      logout();
+    } else {
       logout();
     }
-    router.push("/");
   };
   return (
     <div className="h-16 bg-lime-100 dark:bg-neutral-900 flex justify-between items-center px-5 sticky top-0 z-50">

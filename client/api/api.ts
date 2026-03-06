@@ -1,8 +1,19 @@
 import axios from "axios";
 import toast from "react-hot-toast";
+import Cookies from "js-cookie";
 
 // Base URL for the backend API
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
+// Helper function to handle logout
+const handleLogout = () => {
+  localStorage.removeItem("chat_token");
+  localStorage.removeItem("chat_user");
+  localStorage.removeItem("e2e_private_key");
+  localStorage.removeItem("e2e_public_key");
+  Cookies.remove("chat_token", { path: "/" });
+  window.location.reload();
+};
 
 export interface User {
   _id: string;
@@ -38,6 +49,7 @@ export const verifyTokenApi = async (token: string): Promise<User | null> => {
     toast.error(
       error.response?.data?.message || "Session expired or invalid token",
     );
+    handleLogout();
     return null;
   }
 };
@@ -62,6 +74,7 @@ export const updateProfileApi = async (
     return res.data.data.user;
   } catch (error: any) {
     toast.error(error.response?.data?.message || "Failed to update profile");
+    handleLogout();
     return null;
   }
 };
@@ -153,6 +166,9 @@ export const addContactApi = async (identifier: string, token: string) => {
     return res.data;
   } catch (error: any) {
     toast.error(error.response?.data?.message || "Failed to add contact");
+    if (error.response?.status === 401) {
+      handleLogout();
+    }
     return null;
   }
 };
@@ -167,6 +183,9 @@ export const getIncomingRequestsApi = async (token: string) => {
     toast.error(
       error.response?.data?.message || "Failed to fetch incoming requests",
     );
+    if (error.response?.status === 401) {
+      handleLogout();
+    }
     return null;
   }
 };
@@ -188,6 +207,9 @@ export const updateRequestStatusApi = async (
     return true;
   } catch (error: any) {
     toast.error(error.response?.data?.message || `Failed to ${status} request`);
+    if (error.response?.status === 401) {
+      handleLogout();
+    }
     return false;
   }
 };
@@ -211,6 +233,9 @@ export const createGroupApi = async (
     return res.data.data.group;
   } catch (error: any) {
     toast.error(error.response?.data?.message || "Failed to create group");
+    if (error.response?.status === 401) {
+      handleLogout();
+    }
     return null;
   }
 };
@@ -223,6 +248,9 @@ export const getMyGroupsApi = async (token: string) => {
     return res.data.data.groups;
   } catch (error: any) {
     toast.error(error.response?.data?.message || "Failed to fetch groups");
+    if (error.response?.status === 401) {
+      handleLogout();
+    }
     return null;
   }
 };
@@ -238,6 +266,9 @@ export const requestJoinGroupApi = async (groupId: string, token: string) => {
     return true;
   } catch (error: any) {
     toast.error(error.response?.data?.message || "Failed to send join request");
+    if (error.response?.status === 401) {
+      handleLogout();
+    }
     return false;
   }
 };
@@ -249,6 +280,9 @@ export const getGroupJoinRequestsApi = async (token: string) => {
     });
     return res.data.data.requests as any[];
   } catch (error: any) {
+    if (error.response?.status === 401) {
+      handleLogout();
+    }
     return null;
   }
 };
@@ -268,6 +302,9 @@ export const updateGroupJoinRequestApi = async (
     return true;
   } catch (error: any) {
     toast.error(error.response?.data?.message || "Failed to update request");
+    if (error.response?.status === 401) {
+      handleLogout();
+    }
     return false;
   }
 };
@@ -287,6 +324,9 @@ export const searchGroupsApi = async (query: string, token: string) => {
     }[];
   } catch (error: any) {
     toast.error(error.response?.data?.message || "Search failed");
+    if (error.response?.status === 401) {
+      handleLogout();
+    }
     return null;
   }
 };
@@ -301,6 +341,9 @@ export const getGroupByIdApi = async (groupId: string, token: string) => {
     toast.error(
       error.response?.data?.message || "Failed to fetch group details",
     );
+    if (error.response?.status === 401) {
+      handleLogout();
+    }
     return null;
   }
 };
@@ -316,6 +359,9 @@ export const getGroupByNameApi = async (groupName: string, token: string) => {
     toast.error(
       error.response?.data?.message || "Failed to fetch group details",
     );
+    if (error.response?.status === 401) {
+      handleLogout();
+    }
     return null;
   }
 };
@@ -329,6 +375,9 @@ export const leaveGroupApi = async (groupId: string, token: string) => {
     return true;
   } catch (error: any) {
     toast.error(error.response?.data?.message || "Failed to leave group");
+    if (error.response?.status === 401) {
+      handleLogout();
+    }
     return false;
   }
 };
@@ -342,6 +391,9 @@ export const deleteGroupApi = async (groupId: string, token: string) => {
     return true;
   } catch (error: any) {
     toast.error(error.response?.data?.message || "Failed to delete group");
+    if (error.response?.status === 401) {
+      handleLogout();
+    }
     return false;
   }
 };
@@ -361,6 +413,9 @@ export const addMembersApi = async (
     return res.data.data.group;
   } catch (error: any) {
     toast.error(error.response?.data?.message || "Failed to add members");
+    if (error.response?.status === 401) {
+      handleLogout();
+    }
     return null;
   }
 };
@@ -373,6 +428,9 @@ export const getContactsApi = async (token: string) => {
     return res.data.data.contacts;
   } catch (error: any) {
     toast.error(error.response?.data?.message || "Failed to fetch contacts");
+    if (error.response?.status === 401) {
+      handleLogout();
+    }
     return null;
   }
 };
@@ -387,6 +445,9 @@ export const getAdminGroupsApi = async (token: string) => {
     toast.error(
       error.response?.data?.message || "Failed to fetch admin groups",
     );
+    if (error.response?.status === 401) {
+      handleLogout();
+    }
     return null;
   }
 };
@@ -401,6 +462,9 @@ export const getTasksApi = async (token: string) => {
     return res.data.data;
   } catch (error: any) {
     toast.error(error.response?.data?.message || "Failed to fetch tasks");
+    if (error.response?.status === 401) {
+      handleLogout();
+    }
     return null;
   }
 };
@@ -414,6 +478,9 @@ export const createTaskApi = async (taskData: any, token: string) => {
     return res.data.data;
   } catch (error: any) {
     toast.error(error.response?.data?.message || "Failed to create task");
+    if (error.response?.status === 401) {
+      handleLogout();
+    }
     return null;
   }
 };
@@ -431,6 +498,9 @@ export const updateTaskApi = async (
     return res.data.data;
   } catch (error: any) {
     toast.error(error.response?.data?.message || "Failed to update task");
+    if (error.response?.status === 401) {
+      handleLogout();
+    }
     return null;
   }
 };
@@ -444,6 +514,9 @@ export const deleteTaskApi = async (taskId: string, token: string) => {
     return res.data.data;
   } catch (error: any) {
     toast.error(error.response?.data?.message || "Failed to delete task");
+    if (error.response?.status === 401) {
+      handleLogout();
+    }
     return null;
   }
 };
@@ -471,6 +544,9 @@ export const getNotificationsApi = async (token: string) => {
     toast.error(
       error.response?.data?.message || "Failed to fetch notifications",
     );
+    if (error.response?.status === 401) {
+      handleLogout();
+    }
     return null;
   }
 };
@@ -485,6 +561,9 @@ export const getUnreadNotificationsCountApi = async (token: string) => {
     toast.error(
       error.response?.data?.message || "Failed to fetch unread notifications",
     );
+    if (error.response?.status === 401) {
+      handleLogout();
+    }
     return null;
   }
 };
@@ -504,6 +583,9 @@ export const markNotificationAsReadApi = async (
     return true; // We don't always need to toast a success for marking read to avoid spam
   } catch (error: any) {
     toast.error(error.response?.data?.message || "Failed to mark as read");
+    if (error.response?.status === 401) {
+      handleLogout();
+    }
     return false;
   }
 };
@@ -525,6 +607,9 @@ export const deleteNotificationApi = async (
     toast.error(
       error.response?.data?.message || "Failed to delete notification",
     );
+    if (error.response?.status === 401) {
+      handleLogout();
+    }
     return false;
   }
 };
@@ -587,6 +672,9 @@ export const getIndividualMessagesApi = async (
     return res.data.data;
   } catch (error: any) {
     toast.error(error.response?.data?.message || "Failed to load messages");
+    if (error.response?.status === 401) {
+      handleLogout();
+    }
     return null;
   }
 };
@@ -608,6 +696,9 @@ export const getGroupMessagesApi = async (
     return res.data.data;
   } catch (error: any) {
     toast.error(error.response?.data?.message || "Failed to load messages");
+    if (error.response?.status === 401) {
+      handleLogout();
+    }
     return null;
   }
 };
@@ -629,6 +720,9 @@ export const setSecureChatApi = async (
     return res.data.data;
   } catch (error: any) {
     toast.error(error.response?.data?.message || "Failed to set secure chat");
+    if (error.response?.status === 401) {
+      handleLogout();
+    }
     return null;
   }
 };
@@ -652,6 +746,9 @@ export const verifySecureChatApi = async (
         error.response?.data?.message || "Failed to verify secure chat",
       );
     }
+    if (error.response?.status === 401) {
+      handleLogout();
+    }
     return null;
   }
 };
@@ -672,6 +769,9 @@ export const removeSecureChatApi = async (
     toast.error(
       error.response?.data?.message || "Failed to remove secure chat",
     );
+    if (error.response?.status === 401) {
+      handleLogout();
+    }
     return null;
   }
 };
@@ -694,6 +794,9 @@ export const backupKeysApi = async (
     return res.data;
   } catch (error: any) {
     toast.error(error.response?.data?.message || "Failed to backup keys");
+    if (error.response?.status === 401) {
+      handleLogout();
+    }
     return null;
   }
 };
@@ -705,6 +808,9 @@ export const getKeysApi = async (userId: string, token: string) => {
     });
     return res.data.data;
   } catch (error: any) {
+    if (error.response?.status === 401) {
+      handleLogout();
+    }
     return null;
   }
 };
@@ -721,6 +827,9 @@ export const createVideoCallApi = async (token: string, roomCode: string) => {
     return res.data;
   } catch (error: any) {
     toast.error(error.response?.data?.message || "Failed to create video call");
+    if (error.response?.status === 401) {
+      handleLogout();
+    }
     return null;
   }
 };
@@ -738,6 +847,9 @@ export const joinVideoCallApi = async (token: string, roomCode: string) => {
     if (error.response?.status !== 404) {
       toast.error(error.response?.data?.message || "Failed to join video call");
     }
+    if (error.response?.status === 401) {
+      handleLogout();
+    }
     return { success: false, status: error.response?.status };
   }
 };
@@ -753,6 +865,9 @@ export const endVideoCallApi = async (token: string, roomCode: string) => {
     return res.data;
   } catch (error: any) {
     toast.error(error.response?.data?.message || "Failed to end call");
+    if (error.response?.status === 401) {
+      handleLogout();
+    }
     return null;
   }
 };
@@ -775,6 +890,9 @@ export const getCallHistoryApi = async (token: string) => {
     toast.error(
       error.response?.data?.message || "Failed to fetch call history",
     );
+    if (error.response?.status === 401) {
+      handleLogout();
+    }
     return null;
   }
 };
