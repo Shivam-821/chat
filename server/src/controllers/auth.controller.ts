@@ -43,6 +43,8 @@ export const registerUser = asyncHandler(
     });
 
     const token = user.generateToken();
+    user.token.push(token);
+    await user.save();
 
     return res
       .status(201)
@@ -83,16 +85,15 @@ export const loginUser = asyncHandler(async (req: Request, res: Response) => {
   if (!isPasswordValid) {
     return res.status(401).json(new ApiError(401, "Invalid credentials"));
   }
-  const maxlogin = user.maxlogin + 1;
-  if (maxlogin > 2) {
-    return res
-      .status(400)
-      .json(new ApiError(400, "You cannot login to more than 2 devices"));
-  }
-  user.maxlogin = maxlogin;
-  await user.save();
-
   const token = user.generateToken();
+  user.token.push(token);
+
+  if (user.token.length > 2) {
+    user.token.shift();
+  }
+
+  user.maxlogin = user.token.length;
+  await user.save();
 
   return res
     .status(200)
@@ -120,45 +121,53 @@ export const loginUser = asyncHandler(async (req: Request, res: Response) => {
 export const verifyToken = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const userId = req.user;
+    const userToken =
+      req.headers.authorization?.split(" ")[1] || req.cookies.token;
 
     const user = await UserModel.findById(userId);
     if (!user) {
       return res.status(404).json(new ApiError(404, "User not found"));
     }
 
-    return res.status(200).json(
-      new ApiResponse(
-        200,
-        {
-          user: {
-            _id: user._id,
-            name: user.name,
-            username: user.username,
-            email: user.email,
-            avatar: user.avatar,
-            avatarPublicId: user.avatarPublicId,
-            about: user.about,
+    if (userToken && user.token.includes(userToken)) {
+      return res.status(200).json(
+        new ApiResponse(
+          200,
+          {
+            user: {
+              _id: user._id,
+              name: user.name,
+              username: user.username,
+              email: user.email,
+              avatar: user.avatar,
+              avatarPublicId: user.avatarPublicId,
+              about: user.about,
+            },
           },
-        },
-        "Token verified",
-      ),
-    );
+          "Token verified",
+        ),
+      );
+    }
+
+    return res.status(401).json(new ApiError(401, "Unauthorized"));
   },
 );
 
 export const logoutUser = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const userId = req.user;
+    const userToken =
+      req.headers.authorization?.split(" ")[1] || req.cookies.token;
 
     const user = await UserModel.findById(userId);
     if (!user) {
       return res.status(404).json(new ApiError(404, "User not found"));
     }
 
-    user.maxlogin = user.maxlogin - 1;
-    if (user.maxlogin < 0) {
-      user.maxlogin = 0;
+    if (userToken) {
+      user.token = user.token.filter((t) => t !== userToken);
     }
+    user.maxlogin = user.token.length;
     await user.save();
 
     return res

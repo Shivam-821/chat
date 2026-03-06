@@ -28,7 +28,7 @@ export const authMiddleware = async (
     }
 
     const user = await UserModel.findById(data.id);
-    if (!user) {
+    if (!user || !user.token.includes(token)) {
       return res.status(401).json(new ApiError(401, "Unauthorized"));
     }
     req.user = user;
