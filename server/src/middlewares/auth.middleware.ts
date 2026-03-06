@@ -16,7 +16,10 @@ export const authMiddleware = async (
     const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
 
     if (!token) {
-      return res.status(401).json(new ApiError(401, "Unauthorized"));
+      return res
+        .status(401)
+        .clearCookie("token", { httpOnly: true, secure: true })
+        .json(new ApiError(401, "Unauthorized"));
     }
 
     const data = jwt.verify(
@@ -24,16 +27,25 @@ export const authMiddleware = async (
       process.env.JWT_SECRET as string,
     ) as JwtPayload;
     if (!data) {
-      return res.status(401).json(new ApiError(401, "Unauthorized"));
+      return res
+        .status(401)
+        .clearCookie("token", { httpOnly: true, secure: true })
+        .json(new ApiError(401, "Unauthorized"));
     }
 
     const user = await UserModel.findById(data.id);
     if (!user || !user.token.includes(token)) {
-      return res.status(401).json(new ApiError(401, "Unauthorized"));
+      return res
+        .status(401)
+        .clearCookie("token", { httpOnly: true, secure: true })
+        .json(new ApiError(401, "Unauthorized"));
     }
     req.user = user;
     next();
   } catch (error) {
-    return res.status(401).json(new ApiError(401, "Unauthorized"));
+    return res
+      .status(401)
+      .clearCookie("token", { httpOnly: true, secure: true })
+      .json(new ApiError(401, "Unauthorized"));
   }
 };

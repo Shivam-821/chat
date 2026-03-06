@@ -149,7 +149,10 @@ export const verifyToken = asyncHandler(
       );
     }
 
-    return res.status(401).json(new ApiError(401, "Unauthorized"));
+    return res
+      .status(401)
+      .clearCookie("token", { httpOnly: true, secure: true })
+      .json(new ApiError(401, "Unauthorized"));
   },
 );
 
@@ -172,6 +175,7 @@ export const logoutUser = asyncHandler(
 
     return res
       .status(200)
+      .clearCookie("token", { httpOnly: true, secure: true })
       .json(new ApiResponse(200, {}, "User logged out successfully"));
   },
 );
