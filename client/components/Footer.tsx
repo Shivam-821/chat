@@ -46,7 +46,7 @@ const Footer = () => {
             Terms
           </Link>
           <Link
-            href="#"
+            href="/contact"
             className="hover:text-amber-500 dark:hover:text-slate-50 hover:-translate-y-1 transition-transform"
           >
             Contact

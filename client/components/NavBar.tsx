@@ -128,6 +128,12 @@ const NavBar = () => {
               </>
             )}
 
+            <div
+              onClick={() => router.push("/about")}
+              className="cursor-pointer hover:scale-105 hover:font-semibold py-1"
+            >
+              About
+            </div>
             <div className="flex items-center gap-2 py-1">
               Theme: <ThemeButton />
             </div>

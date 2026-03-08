@@ -10,7 +10,16 @@ export function middleware(request: NextRequest) {
   }
 
   if (!token) {
-    const allowedPaths = ["/", "/chat", "/signin", "/signup"];
+    const allowedPaths = [
+      "/",
+      "/chat",
+      "/about",
+      "/signin",
+      "/signup",
+      "/privacy-policy",
+      "/terms-condition",
+      "/contact",
+    ];
     if (!allowedPaths.includes(path)) {
       return NextResponse.redirect(new URL("/signin", request.url));
     }
