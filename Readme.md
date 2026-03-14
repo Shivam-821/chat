@@ -208,4 +208,6 @@ The backend API follows RESTful principles. Here is a brief overview of the core
 
 ---
 
+Read my article on the End-to-End Encryption: https://medium.com/@shivamraj1109.23/understanding-end-to-end-encryption-build-a-secure-chat-app-with-next-js-websocket-and-web-crypto-ad66679d887c
+
 _For more detailed information regarding socket events, context payloads, and component specifics, please refer to the inline documentation within the source code files._
