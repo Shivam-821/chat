@@ -1,15 +1,15 @@
 import { Server } from "socket.io";
 import jwt from "jsonwebtoken";
-import { getRedisClient } from "./config/redis";
-import { updateOnlineStatus } from "./controllers/user.controller";
-import { GroupModel } from "./models/group.model";
+import { getRedisClient } from "./config/redis.js";
+import { updateOnlineStatus } from "./controllers/user.controller.js";
+import { GroupModel } from "./models/group.model.js";
 import {
   saveIndividualMessage,
   saveGroupMessage,
-} from "./controllers/message.controller";
-import { MessageModel } from "./models/message.model";
-import { IndividualMessageModel } from "./models/individual.model";
-import { PollModel } from "./models/poll.model";
+} from "./controllers/message.controller.js";
+import { MessageModel } from "./models/message.model.js";
+import { IndividualMessageModel } from "./models/individual.model.js";
+import { PollModel } from "./models/poll.model.js";
 
 // Cache group members
 const groupCache = new Map<string, string[]>();

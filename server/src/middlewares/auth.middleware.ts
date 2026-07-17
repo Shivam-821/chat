@@ -1,7 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import jwt, { type JwtPayload } from "jsonwebtoken";
-import { ApiError } from "../utils/ApiError";
-import { UserModel, type Iuser } from "../models/user.model";
+import { ApiError } from "../utils/ApiError.js";
+import { UserModel, type Iuser } from "../models/user.model.js";
 
 export interface AuthRequest extends Request {
   user?: Iuser;

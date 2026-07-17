@@ -4,8 +4,8 @@ import {
   createTask,
   updateTask,
   deleteTask,
-} from "../controllers/task.controller";
-import { authMiddleware } from "../middlewares/auth.middleware";
+} from "../controllers/task.controller.js";
+import { authMiddleware } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 

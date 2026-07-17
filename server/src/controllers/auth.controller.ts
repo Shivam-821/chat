@@ -1,11 +1,11 @@
 import type { Request, Response } from "express";
-import { asyncHandler } from "../utils/asyncHandler";
-import { UserModel } from "../models/user.model";
-import { ApiError } from "../utils/ApiError";
-import { ApiResponse } from "../utils/ApiResponse";
-import type { AuthRequest } from "../middlewares/auth.middleware";
-import { NotificationModel } from "../models/notification.model";
-import { uploadToCloudinary, deleteFromCloudinary } from "../utils/cloudinary";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { UserModel } from "../models/user.model.js";
+import { ApiError } from "../utils/ApiError.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
+import type { AuthRequest } from "../middlewares/auth.middleware.js";
+import { NotificationModel } from "../models/notification.model.js";
+import { uploadToCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js";
 
 export const registerUser = asyncHandler(
   async (req: Request, res: Response) => {

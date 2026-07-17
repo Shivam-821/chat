@@ -12,8 +12,8 @@ import {
   requestJoinGroup,
   getGroupJoinRequests,
   updateGroupJoinRequest,
-} from "../controllers/group.controller";
-import { authMiddleware } from "../middlewares/auth.middleware";
+} from "../controllers/group.controller.js";
+import { authMiddleware } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 

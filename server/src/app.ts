@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import { io } from "./config/socket";
+import { io } from "./config/socket.js";
 
 const app = express();
 
@@ -22,15 +22,15 @@ app.get("/", (req, res) => {
 });
 
 // Important routes
-import authRouter from "./routes/auth.routes";
-import userRouter from "./routes/user.routes";
-import taskRouter from "./routes/task.routes";
-import notificationRouter from "./routes/notification.routes";
-import groupRouter from "./routes/group.routes";
-import messageRouter from "./routes/message.routes";
-import videoRouter from "./routes/video.routes";
+import authRouter from "./routes/auth.routes.js";
+import userRouter from "./routes/user.routes.js";
+import taskRouter from "./routes/task.routes.js";
+import notificationRouter from "./routes/notification.routes.js";
+import groupRouter from "./routes/group.routes.js";
+import messageRouter from "./routes/message.routes.js";
+import videoRouter from "./routes/video.routes.js";
 
-import keysRouter from "./routes/keys.routes";
+import keysRouter from "./routes/keys.routes.js";
 
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/users", userRouter);

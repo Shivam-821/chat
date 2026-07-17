@@ -1,8 +1,8 @@
-import { VideoModel } from "../models/video.model";
-import { asyncHandler } from "../utils/asyncHandler";
-import { ApiError } from "../utils/ApiError";
-import { ApiResponse } from "../utils/ApiResponse";
-import type { AuthRequest } from "../middlewares/auth.middleware";
+import { VideoModel } from "../models/video.model.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { ApiError } from "../utils/ApiError.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
+import type { AuthRequest } from "../middlewares/auth.middleware.js";
 import type { Response } from "express";
 
 // create the video call

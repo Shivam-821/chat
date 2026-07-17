@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { backupKeys, getKeys } from "../controllers/keys.controller";
-import { authMiddleware } from "../middlewares/auth.middleware";
+import { backupKeys, getKeys } from "../controllers/keys.controller.js";
+import { authMiddleware } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 router.use(authMiddleware);

@@ -1,13 +1,13 @@
 import type { Request, Response } from "express";
-import { asyncHandler } from "../utils/asyncHandler";
-import { ApiError } from "../utils/ApiError";
-import { ApiResponse } from "../utils/ApiResponse";
-import { MessageModel } from "../models/message.model";
-import { IndividualMessageModel } from "../models/individual.model";
-import { GroupModel } from "../models/group.model";
-import type { AuthRequest } from "../middlewares/auth.middleware";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { ApiError } from "../utils/ApiError.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
+import { MessageModel } from "../models/message.model.js";
+import { IndividualMessageModel } from "../models/individual.model.js";
+import { GroupModel } from "../models/group.model.js";
+import type { AuthRequest } from "../middlewares/auth.middleware.js";
 import mongoose from "mongoose";
-import "../models/poll.model";
+import "../models/poll.model.js";
 import bcrypt from "bcrypt";
 
 const PAGE_SIZE = 25;

@@ -6,9 +6,9 @@ import {
   updateProfile,
   logoutUser,
   checkUsername,
-} from "../controllers/auth.controller";
-import { authMiddleware } from "../middlewares/auth.middleware";
-import { upload } from "../middlewares/multer.middleware";
+} from "../controllers/auth.controller.js";
+import { authMiddleware } from "../middlewares/auth.middleware.js";
+import { upload } from "../middlewares/multer.middleware.js";
 
 const router = Router();
 

@@ -1,12 +1,12 @@
 import { Router } from "express";
-import { authMiddleware } from "../middlewares/auth.middleware";
+import { authMiddleware } from "../middlewares/auth.middleware.js";
 import {
   getIndividualMessages,
   getGroupMessages,
   setSecureChat,
   verifySecureChat,
   removeSecureChat,
-} from "../controllers/message.controller";
+} from "../controllers/message.controller.js";
 
 const messageRouter = Router();
 

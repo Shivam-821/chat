@@ -1,9 +1,9 @@
 import type { Request, Response } from "express";
-import { Task } from "../models/task.model";
-import { ApiError } from "../utils/ApiError";
-import { ApiResponse } from "../utils/ApiResponse";
-import { asyncHandler } from "../utils/asyncHandler";
-import { NotificationModel } from "../models/notification.model";
+import { Task } from "../models/task.model.js";
+import { ApiError } from "../utils/ApiError.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { NotificationModel } from "../models/notification.model.js";
 
 interface AuthRequest extends Request {
   user?: any;

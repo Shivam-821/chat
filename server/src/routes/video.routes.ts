@@ -4,9 +4,9 @@ import {
   joinVideoCall,
   endVideoCall,
   getCallHistory,
-} from "../controllers/video.controller";
+} from "../controllers/video.controller.js";
 
-import { authMiddleware } from "../middlewares/auth.middleware";
+import { authMiddleware } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 

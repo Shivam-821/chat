@@ -1,10 +1,10 @@
 import type { Response } from "express";
-import type { AuthRequest } from "../middlewares/auth.middleware";
-import { NotificationModel } from "../models/notification.model";
-import { asyncHandler } from "../utils/asyncHandler";
-import { ApiResponse } from "../utils/ApiResponse";
-import { ApiError } from "../utils/ApiError";
-import { Task } from "../models/task.model";
+import type { AuthRequest } from "../middlewares/auth.middleware.js";
+import { NotificationModel } from "../models/notification.model.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
+import { ApiError } from "../utils/ApiError.js";
+import { Task } from "../models/task.model.js";
 
 export const deleteNotification = asyncHandler(
   async (req: AuthRequest, res: Response) => {

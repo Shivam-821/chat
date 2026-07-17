@@ -5,11 +5,11 @@ import {
   getAllNotifications,
   getUnreadNotificationsCount,
   markNotificationAsRead,
-} from "../controllers/notification.controller";
-import { authMiddleware } from "../middlewares/auth.middleware";
+} from "../controllers/notification.controller.js";
+import { authMiddleware } from "../middlewares/auth.middleware.js";
 
 const router = Router();
-    
+
 router.use(authMiddleware);
 
 router.get("/", getAllNotifications);

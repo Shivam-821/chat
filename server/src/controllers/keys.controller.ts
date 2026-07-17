@@ -1,9 +1,9 @@
 import type { Response } from "express";
-import { asyncHandler } from "../utils/asyncHandler";
-import { UserKeysModel } from "../models/userKeys.model";
-import { ApiError } from "../utils/ApiError";
-import { ApiResponse } from "../utils/ApiResponse";
-import type { AuthRequest } from "../middlewares/auth.middleware";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { UserKeysModel } from "../models/userKeys.model.js";
+import { ApiError } from "../utils/ApiError.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
+import type { AuthRequest } from "../middlewares/auth.middleware.js";
 
 export const backupKeys = asyncHandler(
   async (req: AuthRequest, res: Response) => {

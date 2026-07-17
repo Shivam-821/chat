@@ -1,13 +1,13 @@
-import type { Request, Response } from "express";
-import { asyncHandler } from "../utils/asyncHandler";
-import { UserModel } from "../models/user.model";
-import { RequestModel } from "../models/request.model";
-import { ApiError } from "../utils/ApiError";
-import { ApiResponse } from "../utils/ApiResponse";
-import type { AuthRequest } from "../middlewares/auth.middleware";
-import { IndividualMessageModel } from "../models/individual.model";
-import { NotificationModel } from "../models/notification.model";
-import { io } from "../config/socket";
+import type { Response } from "express";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { UserModel } from "../models/user.model.js";
+import { RequestModel } from "../models/request.model.js";
+import { ApiError } from "../utils/ApiError.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
+import type { AuthRequest } from "../middlewares/auth.middleware.js";
+import { IndividualMessageModel } from "../models/individual.model.js";
+import { NotificationModel } from "../models/notification.model.js";
+import { io } from "../config/socket.js";
 
 export const addContactRequest = asyncHandler(
   async (req: AuthRequest, res: Response) => {
